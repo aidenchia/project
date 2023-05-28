@@ -28,6 +28,7 @@ private:
     uint64_t now_ms_{};
     Msg msg_;
     std::map<std::string, int> column_pos_;
+    uint64_t last_timestamp_ = 0;
     // your member variables and member functions below, if any
 };
 

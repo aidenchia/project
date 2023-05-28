@@ -1,5 +1,5 @@
 step1: 	step1.cpp CsvFeeder.cpp CsvFeeder.h Msg.h
-	g++ -o bin/step1.out step1.cpp CsvFeeder.cpp -std=c++17
+	g++ -g -o bin/step1.out step1.cpp CsvFeeder.cpp -std=c++17
 step2: 	step1.cpp CsvFeeder.cpp CsvFeeder.h Msg.h VolSurfBuilder.h
 	g++ -o bin/step2.out step2.cpp CsvFeeder.cpp -std=c++17
 # step 3's compilation rule could be more complicated since it involves external libraries,
