@@ -22,14 +22,26 @@ void VolSurfBuilder<Smile>::Process(const Msg& msg) {
     // TODO (Step 2)
     if (msg.isSnap) {
         // discard currently maintained market snapshot, and construct a new copy based on the input Msg
+        std::map<std::string, TickData> newSurfaceRaw;
+        for (TickData update in msg.Updates) {
+            newSurfaceRaw.insert(update.ContractName, update);
+        }
+        currentSurfaceRaw = newSurfaceRaw;
+
     } else {
         // update the currently maintained market snapshot
+        for (TickData update in msg.Updates) {
+            currentSurfaceRaw.insert_or_assign(update.ContractName, update);
+        }
     }
 }
 
 template <class Smile>
 void VolSurfBuilder<Smile>::PrintInfo() {
     // TODO (Step 2): you may print out information about VolSurfBuilder's currentSnapshot to test
+    for (auto it = currentSurfaceRaw.begin(); it != currentSurfaceRaw.end(); ++it) {
+        std::cout << it->first << " Bid: " << it -> second.BestBidPrice << it->second.BestAskPrice << std::endl;
+    }
 }
 
 template <class Smile>
