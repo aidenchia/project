@@ -22,10 +22,7 @@ double ConvertToDouble(const std::string& str) {
     }
 }
 
-bool ReadNextMsg(std::ifstream& file, Msg& msg, std::map<std::string,int>& column_pos) {
-    std::string line;
-    std::stringstream ss(line);
-    std::string token;
+bool ReadNextMsg(std::ifstream& file, Msg& msg, std::map<std::string,int>& column_pos, uint64_t current_ts = 0U) {
 
     if (file.eof()) {
         return false;
@@ -35,6 +32,9 @@ bool ReadNextMsg(std::ifstream& file, Msg& msg, std::map<std::string,int>& colum
 
     // reading the file for the first time
     else if (msg.isSet == false) {
+        std::string line;
+        std::stringstream ss(line);
+        std::string token;
         msg.isSet = true;
         
         // read the first line and set column positions
@@ -45,8 +45,14 @@ bool ReadNextMsg(std::ifstream& file, Msg& msg, std::map<std::string,int>& colum
             column_pos[token] = pos;
             pos++;
         }
+
+        return true;
     }
     
+    std::string line;
+    std::stringstream ss(line);
+    std::string token;
+
     // read the next line and insert into row vector
     std::getline(file, line);
     std::stringstream ss2(line);
@@ -74,7 +80,24 @@ bool ReadNextMsg(std::ifstream& file, Msg& msg, std::map<std::string,int>& colum
     td.LastPrice = ConvertToDouble(row_vec[column_pos["lastPrice"]]);
     td.OpenInterest = ConvertToDouble(row_vec[column_pos["openInterest"]]);
     
-    msg.Updates.push_back(td);
+    // only True when called by constructor or by .Step()
+    if (current_ts == 0U) {
+        msg.Updates.push_back(td);
+        ReadNextMsg(file, msg, column_pos, msg.timestamp);
+    }
+
+    // recursive call
+    else {
+        if (msg.timestamp == current_ts) {
+            msg.Updates.push_back(td);
+            ReadNextMsg(file, msg, column_pos, msg.timestamp);
+        }
+
+        // reset the file pointer back by a line
+        else {
+            file.seekg(-(row_vec[0].length() + 1), std::ios::cur);
+        }
+    }
 
     return true;
 
