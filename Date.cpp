@@ -13,12 +13,12 @@ double operator-(const datetime_t& d1, const datetime_t& d2)
 
 bool operator<(const datetime_t& d1, const datetime_t& d2)
 {
-    return d2 - d2 > 0;
+    return d2 - d1 > 0;
 }
 
 std::ostream& operator<<(std::ostream& os, const datetime_t& d)
 {
-  os << d.year << " " << d.month << " " << d.day << std::endl;
+  os << d.year << "/" << d.month << "/" << d.day;
   return os;
 }
 

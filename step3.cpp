@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
                          feeder_listener,
                          interval,
                          timer_listener);
+
     while (csv_feeder.Step()) {
     }
     return 0;
