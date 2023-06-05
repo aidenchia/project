@@ -71,8 +71,35 @@ bool ReadNextMsg(std::ifstream& file, Msg& msg, std::map<std::string,int>& colum
         msg.timestamp = TimeToUnixMS(row_vec[column_pos["time"]]);
         current_ts = TimeToUnixMS(row_vec[column_pos["time"]]);
         if (current_ts != last_ts && last_ts != 0U) {
-            file.seekg(-(line.size() + 1), std::ios::cur);
-            break;
+            
+            // hack to read the last line in the file
+            if (file.tellg() == -1) {
+                TickData td;
+                msg.isSnap = row_vec[column_pos["msgType"]] == "snap";
+                td.ContractName = row_vec[column_pos["contractName"]];
+                td.BestBidPrice = ConvertToDouble(row_vec[column_pos["bestBid"]]);
+                td.BestBidAmount = ConvertToDouble(row_vec[column_pos["bestBidAmount"]]);
+                td.BestBidIV = ConvertToDouble(row_vec[column_pos["bestBidIV"]]);
+                td.BestAskPrice = ConvertToDouble(row_vec[column_pos["bestAsk"]]);
+                td.BestAskAmount = ConvertToDouble(row_vec[column_pos["bestAskAmount"]]);
+                td.BestAskIV = ConvertToDouble(row_vec[column_pos["bestAskIV"]]);
+                td.MarkPrice = ConvertToDouble(row_vec[column_pos["markPrice"]]);
+                td.MarkIV = ConvertToDouble(row_vec[column_pos["markIV"]]);
+                td.UnderlyingIndex = row_vec[column_pos["underlyingIndex"]];
+                td.UnderlyingPrice = ConvertToDouble(row_vec[column_pos["underlyingPrice"]]);
+                td.LastPrice = ConvertToDouble(row_vec[column_pos["lastPrice"]]);
+                td.OpenInterest = ConvertToDouble(row_vec[column_pos["openInterest"]]);
+                
+                // add tickdata to msg
+                msg.Updates.push_back(td);
+                continue;
+                
+            }
+
+            else {
+                file.seekg(-(line.size() + 1), std::ios::cur);
+                break;
+            }
         }
 
         // update msg

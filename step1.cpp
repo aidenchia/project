@@ -14,6 +14,9 @@ int main(int argc, char** argv) {
     auto feeder_listener = [&] (const Msg& msg) {
         if (msg.isSet) {
             std::cout << msg.timestamp << ", isSnap = " << msg.isSnap << ", numUpdates = " << msg.Updates.size() << std::endl;
+            // for (auto i: msg.Updates) {
+            //     std::cout << i.ContractName << std::endl;
+            // }
         }
     };
 
