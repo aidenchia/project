@@ -14,6 +14,12 @@ set(SOURCES
 )
 # Set the output directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+
+# Set the output directory for debug build
+if(CMAKE_BUILD_TYPE MATCHES "Debug")
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
+
 # Create the executable
 add_executable(step1 ${SOURCES})
 target_compile_options(step1 PRIVATE -g)
