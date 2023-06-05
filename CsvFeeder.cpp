@@ -22,7 +22,7 @@ double ConvertToDouble(const std::string& str) {
     }
 }
 
-bool ReadNextMsg(std::ifstream& file, Msg& msg, std::map<std::string,int>& column_pos, uint64_t current_ts = 0U) {
+bool ReadNextMsg(std::ifstream& file, Msg& msg, std::map<std::string,int>& column_pos) {
 
     if (file.eof()) {
         return false;
@@ -50,54 +50,53 @@ bool ReadNextMsg(std::ifstream& file, Msg& msg, std::map<std::string,int>& colum
     }
     
     std::string line;
-    std::stringstream ss(line);
-    std::string token;
+    uint64_t current_ts = 0U;
+    uint64_t last_ts = 0U;
+    while (current_ts == last_ts) {
+        
+        // read the next line and insert into row vector
+        std::getline(file, line);
+        if (line.empty()) {
+            return false;
+        }
 
-    // read the next line and insert into row vector
-    std::getline(file, line);
-    std::stringstream ss2(line);
-    std::vector<std::string> row_vec;
-    while (std::getline(ss2, token, ',')) {
-        row_vec.push_back(token);
-    }
+        std::stringstream ss2(line);
+        std::vector<std::string> row_vec;
+        std::string token;
+        while (std::getline(ss2, token, ',')) {
+            row_vec.push_back(token);
+        }
+        
+        // check if timestamp is the same as last read
+        msg.timestamp = TimeToUnixMS(row_vec[column_pos["time"]]);
+        current_ts = TimeToUnixMS(row_vec[column_pos["time"]]);
+        if (current_ts != last_ts && last_ts != 0U) {
+            file.seekg(-(line.size() + 1), std::ios::cur);
+            break;
+        }
 
-
-    // update msg
-    msg.isSnap = row_vec[column_pos["msgType"]] == "snap";
-    msg.timestamp = TimeToUnixMS(row_vec[column_pos["time"]]);
-    TickData td;
-    td.ContractName = row_vec[column_pos["contractName"]];
-    td.BestBidPrice = ConvertToDouble(row_vec[column_pos["bestBid"]]);
-    td.BestBidAmount = ConvertToDouble(row_vec[column_pos["bestBidAmount"]]);
-    td.BestBidIV = ConvertToDouble(row_vec[column_pos["bestBidIV"]]);
-    td.BestAskPrice = ConvertToDouble(row_vec[column_pos["bestAsk"]]);
-    td.BestAskAmount = ConvertToDouble(row_vec[column_pos["bestAskAmount"]]);
-    td.BestAskIV = ConvertToDouble(row_vec[column_pos["bestAskIV"]]);
-    td.MarkPrice = ConvertToDouble(row_vec[column_pos["markPrice"]]);
-    td.MarkIV = ConvertToDouble(row_vec[column_pos["markIV"]]);
-    td.UnderlyingIndex = row_vec[column_pos["underlyingIndex"]];
-    td.UnderlyingPrice = ConvertToDouble(row_vec[column_pos["underlyingPrice"]]);
-    td.LastPrice = ConvertToDouble(row_vec[column_pos["lastPrice"]]);
-    td.OpenInterest = ConvertToDouble(row_vec[column_pos["openInterest"]]);
-    
-    // only True when called by constructor or by .Step()
-    if (current_ts == 0U) {
+        // update msg
+        TickData td;
+        msg.isSnap = row_vec[column_pos["msgType"]] == "snap";
+        td.ContractName = row_vec[column_pos["contractName"]];
+        td.BestBidPrice = ConvertToDouble(row_vec[column_pos["bestBid"]]);
+        td.BestBidAmount = ConvertToDouble(row_vec[column_pos["bestBidAmount"]]);
+        td.BestBidIV = ConvertToDouble(row_vec[column_pos["bestBidIV"]]);
+        td.BestAskPrice = ConvertToDouble(row_vec[column_pos["bestAsk"]]);
+        td.BestAskAmount = ConvertToDouble(row_vec[column_pos["bestAskAmount"]]);
+        td.BestAskIV = ConvertToDouble(row_vec[column_pos["bestAskIV"]]);
+        td.MarkPrice = ConvertToDouble(row_vec[column_pos["markPrice"]]);
+        td.MarkIV = ConvertToDouble(row_vec[column_pos["markIV"]]);
+        td.UnderlyingIndex = row_vec[column_pos["underlyingIndex"]];
+        td.UnderlyingPrice = ConvertToDouble(row_vec[column_pos["underlyingPrice"]]);
+        td.LastPrice = ConvertToDouble(row_vec[column_pos["lastPrice"]]);
+        td.OpenInterest = ConvertToDouble(row_vec[column_pos["openInterest"]]);
+        
+        // add tickdata to msg
         msg.Updates.push_back(td);
-        ReadNextMsg(file, msg, column_pos, msg.timestamp);
+        last_ts = TimeToUnixMS(row_vec[column_pos["time"]]);
     }
 
-    // recursive call
-    else {
-        if (msg.timestamp == current_ts) {
-            msg.Updates.push_back(td);
-            ReadNextMsg(file, msg, column_pos, msg.timestamp);
-        }
-
-        // reset the file pointer back by a line
-        else {
-            file.seekg(-(row_vec[0].length() + 1), std::ios::cur);
-        }
-    }
 
     return true;
 
