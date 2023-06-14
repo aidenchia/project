@@ -39,6 +39,18 @@ void VolSurfBuilder<Smile>::Process(const Msg& msg) {
     }
 }
 
+void ReplaceTickData(Msg &msg, const std::string &contractName, const TickData &newTickData)
+{
+  for (auto &tickData : msg.Updates)
+  {
+    if (tickData.ContractName == contractName)
+    {
+      tickData = newTickData;
+      break; // Found the contract, no need to continue searching
+    }
+  }
+}
+
 datetime_t GetExpiry(const std::string& underlyingIndex) {
     std::vector<std::string> parts;
     size_t pos = underlyingIndex.find("-");

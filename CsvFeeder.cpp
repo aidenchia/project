@@ -79,16 +79,16 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
   {
     // read the file for the first time
     msg.isSet = true;
+    std::cout << "reading header columns..." << std::endl;
     return ReadHeader(file, msg, column_pos);
   }
 
   std::string line;
   uint64_t current_ts = 0U; // currently processing row's ts
   uint64_t last_ts = 0U;    // previously processed row's ts
-  uint64_t first_snap_ts = 0U;
 
   // Print the positions
-  std::cout << "after reading header Initial Position: " << initialPosition << std::endl;
+  std::cout << "reading row data Position before while loop: " << initialPosition << std::endl;
   while (current_ts == last_ts || msg.Updates.empty())
   {
 
@@ -117,7 +117,7 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
     msg.LogMsg();
     // check if timestamp is the same as last read
     msg.timestamp = TimeToUnixMS(row_vec[column_pos["time"]]);
-    current_ts = TimeToUnixMS(row_vec[column_pos["time"]]);
+    current_ts = msg.timestamp;
 
     if (msg.Updates.empty())
     {
@@ -125,10 +125,6 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
       {
         // skip rows until first snap message found
         continue;
-      }
-      else
-      {
-        first_snap_ts = current_ts;
       }
     }
 
@@ -142,56 +138,25 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
     }
 
     // update msg
-    msg.isSnap = row_vec[column_pos["msgType"]] == "snap";
+    // add tickdata to msg 
+    std::cout << "adding tick data updates..." << std::endl;
+    msg.Updates.emplace_back(
+        row_vec[column_pos["contractName"]],
+        ConvertToDouble(row_vec[column_pos["bestBid"]]),
+        ConvertToDouble(row_vec[column_pos["bestBidAmount"]]),
+        ConvertToDouble(row_vec[column_pos["bestBidIV"]]),
+        ConvertToDouble(row_vec[column_pos["bestAsk"]]),
+        ConvertToDouble(row_vec[column_pos["bestAskAmount"]]),
+        ConvertToDouble(row_vec[column_pos["bestAskIV"]]),
+        ConvertToDouble(row_vec[column_pos["markPrice"]]),
+        ConvertToDouble(row_vec[column_pos["markIV"]]),
+        row_vec[column_pos["underlyingIndex"]],
+        ConvertToDouble(row_vec[column_pos["underlyingPrice"]]),
+        ConvertToDouble(row_vec[column_pos["lastPrice"]]),
+        ConvertToDouble(row_vec[column_pos["open_interest"]]),
+        last_ts);
 
-    if (msg.isSnap)
-    {
-      std::cout << "msg is a snap proceed to check if its a subsequent snaps which require clear..." << std::endl;
-      if (first_snap_ts != TimeToUnixMS(row_vec[column_pos["time"]]))
-      {
-        std::cout << "first snap time is : " << first_snap_ts << " different from current row time proceed to clear... " << std::endl; 
-        msg.Updates.clear();
-      }
-      // add tickdata to msg after droping all previous snaps
-      std::cout<< "adding tick data updates..."<< std::endl;
-      msg.Updates.emplace_back(
-          row_vec[column_pos["contractName"]],
-          ConvertToDouble(row_vec[column_pos["bestBid"]]),
-          ConvertToDouble(row_vec[column_pos["bestBidAmount"]]),
-          ConvertToDouble(row_vec[column_pos["bestBidIV"]]),
-          ConvertToDouble(row_vec[column_pos["bestAsk"]]),
-          ConvertToDouble(row_vec[column_pos["bestAskAmount"]]),
-          ConvertToDouble(row_vec[column_pos["bestAskIV"]]),
-          ConvertToDouble(row_vec[column_pos["markPrice"]]),
-          ConvertToDouble(row_vec[column_pos["markIV"]]),
-          row_vec[column_pos["underlyingIndex"]],
-          ConvertToDouble(row_vec[column_pos["underlyingPrice"]]),
-          ConvertToDouble(row_vec[column_pos["lastPrice"]]),
-          ConvertToDouble(row_vec[column_pos["open_interest"]]),
-          last_ts);
-    }
-    else
-    {
-      std::cout << "msg is not a snap, proceed with replace tick data..." << std::endl;
-      ReplaceTickData(msg,
-                      row_vec[column_pos["contractName"]],
-                      TickData(row_vec[column_pos["contractName"]],
-                               ConvertToDouble(row_vec[column_pos["bestBid"]]),
-                               ConvertToDouble(row_vec[column_pos["bestBidAmount"]]),
-                               ConvertToDouble(row_vec[column_pos["bestBidIV"]]),
-                               ConvertToDouble(row_vec[column_pos["bestAsk"]]),
-                               ConvertToDouble(row_vec[column_pos["bestAskAmount"]]),
-                               ConvertToDouble(row_vec[column_pos["bestAskIV"]]),
-                               ConvertToDouble(row_vec[column_pos["markPrice"]]),
-                               ConvertToDouble(row_vec[column_pos["markIV"]]),
-                               row_vec[column_pos["underlyingIndex"]],
-                               ConvertToDouble(row_vec[column_pos["underlyingPrice"]]),
-                               ConvertToDouble(row_vec[column_pos["lastPrice"]]),
-                               ConvertToDouble(row_vec[column_pos["open_interest"]]),
-                               TimeToUnixMS(row_vec[column_pos["time"]])));
-    }
-
-    last_ts = TimeToUnixMS(row_vec[column_pos["time"]]);
+    last_ts = msg.timestamp;
 
     std::cout << "after adding tick data to updates" << std::endl;
     std::cout << "updated last ts: " << last_ts << std::endl;
