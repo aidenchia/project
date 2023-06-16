@@ -54,6 +54,11 @@ struct TickData
                                         LastUpdateTimeStamp(LastUpdateTimeStamp)
     {
         // logging it out just to ensure the data is being added correctly
+        LogTickData();
+    }
+
+    void LogTickData() const{
+        // logging it out just to ensure the data is being added correctly
         std::cout << "-------------" << std::endl;
         std::cout << "Tick Data:" << std::endl;
         std::cout << "-------------" << std::endl;
