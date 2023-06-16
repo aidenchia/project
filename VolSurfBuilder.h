@@ -31,7 +31,7 @@ void VolSurfBuilder<Smile>::Process(const Msg &msg)
     {
         currentSurfaceRaw.clear();
         // discard currently maintained market snapshot, and construct a new copy based on the input Msg
-        for (const TickData &update  : msg.Updates)
+        for (const TickData &update : msg.Updates)
         {
             currentSurfaceRaw.emplace(update.ContractName, update);
         }
@@ -78,8 +78,9 @@ void VolSurfBuilder<Smile>::PrintInfo()
     // TODO (Step 2): you may print out information about VolSurfBuilder's currentSnapshot to test
     for (auto it = currentSurfaceRaw.begin(); it != currentSurfaceRaw.end(); ++it)
     {
-        std::cout <<"|" << it->second.LastUpdateTimeStamp << "|"
-        << it->first << "|" << " MarkIV : " << it->second.MarkIV << std::endl;
+        std::cout << "|" << it->second.LastUpdateTimeStamp << "|"
+                  << it->first << "|"
+                  << " MarkIV : " << it->second.MarkIV << std::endl;
     }
 }
 
@@ -90,7 +91,6 @@ std::map<datetime_t, std::pair<Smile, double>> VolSurfBuilder<Smile>::FitSmiles(
     std::map<datetime_t, std::vector<TickData>> tickersByExpiry{};
 
     // TODO (Step 3): group the tickers in the current market snapshot by expiry date, and construct tickersByExpiry
-    // TODO:
     for (auto it = currentSurfaceRaw.begin(); it != currentSurfaceRaw.end(); ++it)
     {
         TickData td = it->second;
@@ -101,10 +101,9 @@ std::map<datetime_t, std::pair<Smile, double>> VolSurfBuilder<Smile>::FitSmiles(
             std::vector<TickData> new_vector{td};
             tickersByExpiry.insert(std::pair<datetime_t, std::vector<TickData>>(expiryDate, new_vector));
         }
-
         else
         {
-            tickersByExpiry[expiryDate].push_back(td);
+            tickersByExpiry[expiryDate].emplace_back(td);
         }
     }
 
@@ -117,7 +116,8 @@ std::map<datetime_t, std::pair<Smile, double>> VolSurfBuilder<Smile>::FitSmiles(
         {
             std::cout << i.ContractName << std::endl;
         }
-        // auto sm = Smile::FitSmile(iter->second);  // TODO: you need to implement FitSmile function in CubicSmile
+        // auto sm = Smile::FitSmile(iter->second);  
+        // TODO: you need to implement FitSmile function in CubicSmile
         // double fittingError = 0;
         // TODO (Step 3): we need to measure the fitting error here
         // res.insert(std::pair<datetime_t, std::pair<Smile, double> >(iter->first,std::pair<Smile, double>(sm, fittingError)));
