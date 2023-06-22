@@ -21,16 +21,6 @@ protected:
     std::map<std::string, TickData> currentSurfaceRaw;
 };
 
-// void CheckSurface(const std::map<std::string, TickData> &surface)
-// {
-//     int count = 5;
-//     for (auto it = surface.begin(); it != surface.end() && count < 5; ++it, ++count)
-//     {
-//         std::cout << "Key: " << it->first << std::endl;
-//         it->second.LogTickData();
-//     }
-// }
-
 template <class Smile>
 void VolSurfBuilder<Smile>::Process(const Msg &msg)
 {
@@ -55,34 +45,7 @@ void VolSurfBuilder<Smile>::Process(const Msg &msg)
         }
     }
 
-    // CheckSurface(currentSurfaceRaw);
 }
-
-// datetime_t GetExpiry(const std::string &underlyingIndex)
-// {
-//     std::vector<std::string> parts;
-//     size_t pos = underlyingIndex.find("-");
-
-//     if ((pos != std::string::npos))
-//     {
-//         std::string str_datetime = underlyingIndex.substr(pos + 1);
-//         std::istringstream iss(str_datetime);
-//         std::tm time = {};
-//         iss >> std::get_time(&time, "%d%b%y");
-
-//         datetime_t datetime;
-//         datetime.year = time.tm_year + 1900; // tm_year is years since 1900
-//         datetime.month = time.tm_mon + 1;    // tm_mon is 0-based, so add 1
-//         datetime.day = time.tm_mday;
-
-//         return datetime;
-//     }
-
-//     else
-//     {
-//         throw std::runtime_error("Underlying index does not contain hyphen");
-//     }
-// }
 
 template <class Smile>
 void VolSurfBuilder<Smile>::PrintInfo()
@@ -99,8 +62,6 @@ void VolSurfBuilder<Smile>::PrintInfo()
 template <class Smile>
 std::map<datetime_t, std::pair<Smile, double>> VolSurfBuilder<Smile>::FitSmiles()
 {
-    // CheckSurface(currentSurfaceRaw);
-
     std::map<datetime_t, std::vector<TickData>> tickersByExpiry{};
 
     // TODO (Step 3): group the tickers in the current market snapshot by expiry date, and construct tickersByExpiry
@@ -130,7 +91,7 @@ std::map<datetime_t, std::pair<Smile, double>> VolSurfBuilder<Smile>::FitSmiles(
         {
             std::cout << i.ContractName << std::endl;
         }
-        // auto sm = Smile::FitSmile(iter->second);
+        auto sm = Smile::FitSmile(iter->second);
         // TODO: you need to implement FitSmile function in CubicSmile
         // double fittingError = 0;
         // TODO (Step 3): we need to measure the fitting error here

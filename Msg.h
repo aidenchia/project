@@ -125,6 +125,7 @@ struct TickData
         std::cout << "Strike : " << Strike << std::endl;
         std::cout << "OptionType : " << OptionType << std::endl;
         LogMoneyness();
+        std::cout << "-------------" << std::endl;
     }
 
     void ExtractContractInfo()
