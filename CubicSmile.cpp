@@ -29,10 +29,10 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   }
 
   double undPriceSum = std::accumulate(volTickerSnap.begin(), volTickerSnap.end(), 0.0,
-                               [](double acc, const TickData &data)
-                               {
-                                 return acc + data.UnderlyingPrice;
-                               });
+                                       [](double acc, const TickData &data)
+                                       {
+                                         return acc + data.UnderlyingPrice;
+                                       });
 
   // use average since there are some slight difference of the timestamp which resulted in different underlying price
   fwd = undPriceSum / static_cast<double>(volTickerSnap.size());
@@ -42,10 +42,24 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   // getting the time to maturity
   T = expiryDate - currentTimeStamp;
 
-
   atmvol = GetATMVolatility(volTickerSnap, fwd);
 
+  // we use quick delta: qd = N(log(F/K / (atmvol) / sqrt(T))
+  double stdev = atmvol * sqrt(T);
+  double k_qd90 = quickDeltaToStrike(0.9, fwd, stdev);
+  double k_qd75 = quickDeltaToStrike(0.75, fwd, stdev);
+  double k_qd25 = quickDeltaToStrike(0.25, fwd, stdev);
+  double k_qd10 = quickDeltaToStrike(0.10, fwd, stdev);
 
+  double vol90 = interpolateQuickDeltaIV(volTickerSnap, k_qd90, false);
+  double vol75 = interpolateQuickDeltaIV(volTickerSnap, k_qd75, false);
+  double vol25 = interpolateQuickDeltaIV(volTickerSnap, k_qd25, true);
+  double vol10 = interpolateQuickDeltaIV(volTickerSnap, k_qd10, true);
+
+  bf25 = ((vol75 + vol25) / 2.0) - atmvol;
+  bf10 = ((vol90 + vol10) / 2.0) - atmvol;
+  rr25 = vol25 - vol75;
+  rr10 = vol10 - vol90;
 
   return CubicSmile(fwd, T, atmvol, bf25, rr25, bf10, rr10);
 }

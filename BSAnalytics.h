@@ -71,12 +71,13 @@ double quickDeltaToStrike(double qd, double fwd, double atmvol, double T)
     return quickDeltaToStrike(qd, fwd, stdev);
 }
 
-double impliedVol(OptionType optionType, double k, double fwd, double T, double undiscPrice)
-{
-    auto f = [undiscPrice, optionType, k, fwd, T](double vol)
-    { return bsUndisc(optionType, k, fwd, T, vol) - undiscPrice; };
-    return rfbrent(f, 1e-4, 10, 1e-6);
-}
+// double impliedVol(OptionType optionType, double k, double fwd, double T, double undiscPrice)
+// {
+//     auto f = [undiscPrice, optionType, k, fwd, T](double vol)
+//     { return bsUndisc(optionType, k, fwd, T, vol) - undiscPrice; };
+//     // finding the value of implied volatility that makes the equation f bs price and market price is same.
+//     return rfbrent(f, 1e-4, 10, 1e-6);
+// }
 
 /// @brief using the smallest difference OTM call and put and take avg as guess for ATMVol
 /// TODO: check for ATM options if present (this may be wrong implementaion KIV is the other interpolation is bad try to correct this)
@@ -133,12 +134,10 @@ double InterpolateATMVolatility(const std::vector<double> &strikes, const std::v
     return 0.0;
 }
 
-
-
-/// @brief this interpolate ATM VOL with both ITM and OTM option and taking the nearby strike to interpolate 
-/// @param volTickerSnap 
-/// @param underlyingPrice 
-/// @return 
+/// @brief this interpolate ATM VOL with both ITM and OTM option and taking the nearby strike to interpolate
+/// @param volTickerSnap
+/// @param underlyingPrice
+/// @return
 double GetATMVolatility(const std::vector<TickData> &volTickerSnap, double underlyingPrice)
 {
     std::vector<double> nearbyStrikes;
@@ -148,10 +147,9 @@ double GetATMVolatility(const std::vector<TickData> &volTickerSnap, double under
     // Collect nearby strikes and their corresponding implied volatilities
     for (const TickData &tickData : volTickerSnap)
     {
-        if (std::abs(tickData.Strike - underlyingPrice) <= nearbyStrikeRange)
+        if (std::abs(tickData.Strike - underlyingPrice) <= nearbyStrikeRange && tickData.moneyness == Moneyness::OTM)
         {
             nearbyStrikes.push_back(tickData.Strike);
-
             impliedVolatilities.push_back(tickData.MarkIV);
         }
     }
@@ -165,6 +163,66 @@ double GetATMVolatility(const std::vector<TickData> &volTickerSnap, double under
     return atmvol;
 }
 
+double interpolateIV(const TickData &option1, const TickData &option2, double strike)
+{
+    double weight = (strike - option1.Strike) / (option2.Strike - option1.Strike);
+    double impliedVolatility = option1.MarkIV +
+                               weight * (option2.MarkIV - option1.MarkIV);
 
+    return impliedVolatility;
+}
+
+std::vector<TickData> filterOptions(const std::vector<TickData>& options, std::string optionType)
+{
+    std::vector<TickData> filteredOptions;
+
+    for (const TickData& option : options)
+    {
+        if (option.OptionType == optionType) // check if it is C or P
+        {
+            filteredOptions.push_back(option);
+        }
+    }
+
+    return filteredOptions;
+}
+
+double interpolateQuickDeltaIV(
+    const std::vector<TickData> &volTickerSnap, double quickDeltaStrike, bool useCallOption)
+{
+    if (useCallOption)
+    {
+        std::vector<TickData> callOptions = filterOptions(volTickerSnap, "C");
+        // Sort the call and put options based on strike
+        std::sort(callOptions.begin(), callOptions.end(),
+                  [](const TickData &a, const TickData &b){ return a.Strike < b.Strike; });
+        // Find the nearest call and put options to the quick delta strike
+        auto callOption = std::upper_bound(callOptions.begin(), callOptions.end(), quickDeltaStrike,
+                                           [](double val, const TickData &option)
+                                           { return val < option.Strike; });
+        if (callOption != callOptions.end())
+        {
+            double callVolatility = interpolateIV(*callOption, *(callOption - 1), quickDeltaStrike);
+            return callVolatility;
+        }
+    }
+    else
+    {
+        std::vector<TickData> putOptions = filterOptions(volTickerSnap, "P");
+        std::sort(putOptions.begin(), putOptions.end(),
+                  [](const TickData &a, const TickData &b)
+                  { return a.Strike < b.Strike; });
+
+        auto putOption = std::lower_bound(putOptions.begin(), putOptions.end(), quickDeltaStrike,
+                                          [](const TickData &option, double val)
+                                          { return option.Strike < val; });
+
+        double putVolatility = interpolateIV(*putOption, *(putOption - 1), quickDeltaStrike);
+        return putVolatility;
+    }
+
+    // Handle the case when the nearest call or put option is not available for interpolation
+    return 0.0; // or any other appropriate default value
+}
 
 #endif
