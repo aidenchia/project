@@ -37,10 +37,11 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   // use average since there are some slight difference of the timestamp which resulted in different underlying price
   fwd = undPriceSum / static_cast<double>(volTickerSnap.size());
 
-  datetime_t currentTimeStamp(volTickerSnap[0].LastUpdateTimeStamp);
+  datetime_t currentTimeStamp(volTickerSnap[0].LastUpdateTimeStamp / 1000);
   datetime_t expiryDate = volTickerSnap[0].ExpiryDate;
   // getting the time to maturity
   T = expiryDate - currentTimeStamp;
+  T = T  < 0.001 ? 0.001 : T;
 
   atmvol = GetATMVolatility(volTickerSnap, fwd);
 
@@ -123,7 +124,7 @@ void CubicSmile::BuildInterp()
   }
 }
 
-double CubicSmile::Vol(double strike)
+double CubicSmile::Vol(double strike) const
 {
   unsigned i;
   // we use trivial search, but can consider binary search for better performance

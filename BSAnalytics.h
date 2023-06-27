@@ -33,9 +33,8 @@ double cnorm(double x)
 double invcnorm(double x)
 {
     assert(x > 0 && x < 1);
-    auto f = [&x](double v)
-    { return cnorm(v) - x; };
-    return rfbisect(f, 1e-6, 1e8, 1e-6);
+    auto f = [&x](double v){ return cnorm(v) - x; };
+    return rfbisect(f, -1e6, 1e8, 1e-6);
 }
 
 double bsUndisc(OptionType optType, double k, double fwd, double T, double sigma)
@@ -61,7 +60,9 @@ double bsUndisc(OptionType optType, double k, double fwd, double T, double sigma
 // qd = N(log(F/K) / stdev), so K = F / exp((N^{-1}(qd) * stdev))
 double quickDeltaToStrike(double qd, double fwd, double stdev)
 {
+    std::cout << "quick delta "<< qd << std::endl;
     double inv = invcnorm(qd);
+    std::cout <<" to strike of : "<< fwd / std::exp(inv * stdev) << std::endl;
     return fwd / std::exp(inv * stdev);
 }
 
@@ -172,11 +173,11 @@ double interpolateIV(const TickData &option1, const TickData &option2, double st
     return impliedVolatility;
 }
 
-std::vector<TickData> filterOptions(const std::vector<TickData>& options, std::string optionType)
+std::vector<TickData> filterOptions(const std::vector<TickData> &options, std::string optionType)
 {
     std::vector<TickData> filteredOptions;
 
-    for (const TickData& option : options)
+    for (const TickData &option : options)
     {
         if (option.OptionType == optionType) // check if it is C or P
         {
@@ -195,7 +196,8 @@ double interpolateQuickDeltaIV(
         std::vector<TickData> callOptions = filterOptions(volTickerSnap, "C");
         // Sort the call and put options based on strike
         std::sort(callOptions.begin(), callOptions.end(),
-                  [](const TickData &a, const TickData &b){ return a.Strike < b.Strike; });
+                  [](const TickData &a, const TickData &b)
+                  { return a.Strike < b.Strike; });
         // Find the nearest call and put options to the quick delta strike
         auto callOption = std::upper_bound(callOptions.begin(), callOptions.end(), quickDeltaStrike,
                                            [](double val, const TickData &option)
