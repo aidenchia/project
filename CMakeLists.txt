@@ -11,6 +11,7 @@ set(SOURCES
     CsvFeeder.cpp
     CsvFeeder.h
     Msg.h
+    Date.cpp
 )
 # Set the output directory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
@@ -31,6 +32,7 @@ set(SOURCES_STEP2
     CsvFeeder.h
     Msg.h
     VolSurfBuilder.h
+    Date.cpp
 )
 # Create the executable for step2
 add_executable(step2 ${SOURCES_STEP2})
@@ -63,6 +65,7 @@ target_include_directories(test_lbfgs PRIVATE Solver)
 add_executable(test_ts_parser
     test_ts_parser.cpp
     CsvFeeder.cpp
+    Date.cpp
 )
 target_compile_options(test_ts_parser PRIVATE -g)
 
