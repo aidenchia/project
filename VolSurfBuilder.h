@@ -111,6 +111,7 @@ double VolSurfBuilder<Smile>::CalculateFittingError(const std::vector<TickData> 
         double sigma_i = (tickData.BestBidIV + tickData.BestAskIV) / 2.0;
 
         // Calculate model implied volatility
+        // TODO: Check why is this nan 
         double sigma_ki = sm.Vol(tickData.Strike);
 
         // Calculate difference and multiply by weight

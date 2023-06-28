@@ -33,7 +33,8 @@ double cnorm(double x)
 double invcnorm(double x)
 {
     assert(x > 0 && x < 1);
-    auto f = [&x](double v){ return cnorm(v) - x; };
+    auto f = [&x](double v)
+    { return cnorm(v) - x; };
     return rfbisect(f, -1e6, 1e8, 1e-6);
 }
 
@@ -60,9 +61,9 @@ double bsUndisc(OptionType optType, double k, double fwd, double T, double sigma
 // qd = N(log(F/K) / stdev), so K = F / exp((N^{-1}(qd) * stdev))
 double quickDeltaToStrike(double qd, double fwd, double stdev)
 {
-    std::cout << "quick delta "<< qd << std::endl;
+    std::cout << "quick delta " << qd << std::endl;
     double inv = invcnorm(qd);
-    std::cout <<" to strike of : "<< fwd / std::exp(inv * stdev) << std::endl;
+    std::cout << " to strike of : " << fwd / std::exp(inv * stdev) << std::endl;
     return fwd / std::exp(inv * stdev);
 }
 
@@ -188,6 +189,8 @@ std::vector<TickData> filterOptions(const std::vector<TickData> &options, std::s
     return filteredOptions;
 }
 
+// TODO : TRY USING ALL THE VOLTICKERSNAP INSTEAD OF FILTERING SEE IF IT HANDLES THE CORNER CASE FOR CALL WITH LARGER K
+// TODO: ELSE TRY TO IMPLEMENT EXTRAPOLATION FOR CALL WITH LARGER K THAN CALLOPTIONS AND PUT WITH SMALLER K THAN PUTOPTIONS LIST. SEE WHICH IS BETTER
 double interpolateQuickDeltaIV(
     const std::vector<TickData> &volTickerSnap, double quickDeltaStrike, bool useCallOption)
 {
@@ -198,6 +201,14 @@ double interpolateQuickDeltaIV(
         std::sort(callOptions.begin(), callOptions.end(),
                   [](const TickData &a, const TickData &b)
                   { return a.Strike < b.Strike; });
+        // Check if the quickDeltaStrike is higher than the highest strike in callOptions
+        if (quickDeltaStrike > callOptions.back().Strike)
+        {
+            // Extrapolate for call options
+            // TODO: WIP IMPLEMENTATION 
+            double callVolatility = extrapolateIV(callOptions, quickDeltaStrike);
+            return callVolatility;
+        }
         // Find the nearest call and put options to the quick delta strike
         auto callOption = std::upper_bound(callOptions.begin(), callOptions.end(), quickDeltaStrike,
                                            [](double val, const TickData &option)
@@ -214,7 +225,14 @@ double interpolateQuickDeltaIV(
         std::sort(putOptions.begin(), putOptions.end(),
                   [](const TickData &a, const TickData &b)
                   { return a.Strike < b.Strike; });
-
+        // Check if the quickDeltaStrike is lower than the lowest strike in putOptions
+        if (quickDeltaStrike < putOptions.front().Strike)
+        {
+            // Extrapolate for put options
+            // TODO: WIP IMPLEMENTATION
+            double putVolatility = extrapolateIV(putOptions, quickDeltaStrike);
+            return putVolatility;
+        }
         auto putOption = std::lower_bound(putOptions.begin(), putOptions.end(), quickDeltaStrike,
                                           [](const TickData &option, double val)
                                           { return option.Strike < val; });

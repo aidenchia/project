@@ -15,7 +15,7 @@ double rfbisect(std::function<double(double)> f, double a, double b, double tol)
     while ((b - a) / 2 > tol)
     {
         c = (a + b) / 2.0;
-        std::cout << "(a, b) = (" << a << ", " << b << ")" << std::endl;
+        // std::cout << "(a, b) = (" << a << ", " << b << ")" << std::endl;
         if (std::abs(f(c)) < tol)
         {
             std::cout << "C = " << c << std::endl;
