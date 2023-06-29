@@ -34,19 +34,19 @@ int main(int argc, char **argv)
         // TODO: stream the smiles and their fitting error to outputFile.csv
         std::ofstream outputFile(output_filename);
         if (outputFile.is_open()) {
-            outputFile << "Date,Smile,Vol" << std::endl;
+            outputFile << "Date,Fitting Error" << std::endl;
             
             for (const auto& e: smiles) {
-                const datetime_t& timestamp = e.first;
-                const auto smile = e.second.first;
-                const double fittingError = e.second.second;
-                
-                
+                outputFile << e.first << "," << e.second.second << std::endl;
             }
+
+            outputFile.close();
         }
 
-
-
+        else {
+            std::cout << "Error opening the file" << std::endl;
+        }
+            
     };
 
     const auto interval = std::chrono::minutes(1); // we call timer_listener at 1 minute interval
