@@ -73,43 +73,6 @@ double quickDeltaToStrike(double qd, double fwd, double atmvol, double T)
     return quickDeltaToStrike(qd, fwd, stdev);
 }
 
-// double impliedVol(OptionType optionType, double k, double fwd, double T, double undiscPrice)
-// {
-//     auto f = [undiscPrice, optionType, k, fwd, T](double vol)
-//     { return bsUndisc(optionType, k, fwd, T, vol) - undiscPrice; };
-//     // finding the value of implied volatility that makes the equation f bs price and market price is same.
-//     return rfbrent(f, 1e-4, 10, 1e-6);
-// }
-
-/// @brief using the smallest difference OTM call and put and take avg as guess for ATMVol
-/// TODO: check for ATM options if present (this may be wrong implementaion KIV is the other interpolation is bad try to correct this)
-/// @param volTickerSnap
-/// @return
-// double GetATMVolatility(const std::vector<TickData> &volTickerSnap)
-// {
-//     double minDiffCall = std::numeric_limits<double>::max();
-//     double minDiffPut = std::numeric_limits<double>::max();
-
-//     for (const TickData &tickData : volTickerSnap)
-//     {
-//         if (tickData.moneyness == Moneyness::OTM)
-//         {
-//             if (tickData.OptionType == "C")
-//             {
-//                 minDiffCall = std::min(minDiffCall, tickData.Strike - tickData.UnderlyingPrice);
-//             }
-//             else if (tickData.OptionType == "P")
-//             {
-//                 minDiffPut = std::min(minDiffPut, tickData.UnderlyingPrice - tickData.Strike);
-//             }
-//         }
-//     }
-
-//     double atmvol = (minDiffCall + minDiffPut) / 2.0;
-
-//     return atmvol;
-// }
-
 double InterpolateATMVolatility(const std::vector<double> &strikes, const std::vector<double> &volatilities, double underlyingPrice)
 {
     // Find the nearest strikes above and below the underlying price
@@ -238,7 +201,7 @@ double interpolateQuickDeltaIV(
         }
         // Find the nearest call and put options to the quick delta strike
         auto callOption = std::upper_bound(callOptions.begin(), callOptions.end(), quickDeltaStrike,
-                                           [](double val, const TickData &option)
+                                          [](double val, const TickData &option)
                                            { return val < option.Strike; });
         if (callOption != callOptions.end())
         {

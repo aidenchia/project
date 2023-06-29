@@ -125,25 +125,75 @@ void CubicSmile::BuildInterp()
   }
 }
 
+/**
+ * In the revised Vol() function, when we need to extrapolate to the left (when strike is less than the smallest strike in strikeMarks), 
+ * we pretend that the strike lies within the first interval of our strikeMarks (between strikeMarks[0] and strikeMarks[1]). 
+ * We then use the same cubic spline that was built for that interval to estimate the volatility for the strike. This is done by setting i = 1 if i == 0.
+ * Similarly, when we need to extrapolate to the right (when strike is greater than the largest strike in strikeMarks), 
+ * we pretend that the strike lies within the last interval of our strikeMarks (between strikeMarks[n-2] and strikeMarks[n-1], 
+ * where n is the size of strikeMarks). We then use the same cubic spline that was built for that interval to estimate the volatility for the strike. 
+ * This is done by setting i = strikeMarks.size() - 1 if i == strikeMarks.size().
+ * Once we have the bracketing interval for the strike, whether it's due to actual interpolation or pretended for extrapolation, we use the cubic spline formula to estimate the volatility.
+ * The cubic spline formula consists of a weighted average of the volatilities at the two ends of the bracketing interval (strikeMarks[i-1].second and strikeMarks[i].second), 
+ * and two terms involving the second derivatives at the two ends (y2[i-1] and y2[i]) which ensure that the function is smooth and has continuous first and second derivatives.
+ * While this method can provide reasonable results when the strike is not too far outside the range of strikeMarks, it is still a form of extrapolation, 
+ * and its accuracy will decrease the further strike is from the range of strikeMarks. 
+ * The extrapolation is essentially assuming that the trend observed within the range (as characterized by the cubic spline) continues outside the range. 
+ * If this assumption is not accurate, then the extrapolated volatilities may not be accurate.
+ */
 double CubicSmile::Vol(double strike) const
 {
   unsigned i;
   // we use trivial search, but can consider binary search for better performance
   for (i = 0; i < strikeMarks.size(); i++)
-    if (strike < strikeMarks[i].first)
+    if (strike <= strikeMarks[i].first)
       break; // i stores the index of the right end of the bracket
 
-  // extrapolation
-  if (i == 0)
-    return strikeMarks[i].second;
-  if (i == strikeMarks.size())
-    return strikeMarks[i - 1].second;
+  // interpolate or extrapolate
+  if (i == 0) // extrapolation to the left
+    i = 1;
+  if (i == strikeMarks.size()) // extrapolation to the right
+    i = strikeMarks.size() - 1;
 
-  // interpolate
+  // Now we are sure that strike is bracketed by strikeMarks[i-1] and strikeMarks[i]
+
+  // interpolate or extrapolate using the cubic spline
   double h = strikeMarks[i].first - strikeMarks[i - 1].first;
   double a = (strikeMarks[i].first - strike) / h;
   double b = 1 - a;
   double c = (a * a * a - a) * h * h / 6.0;
   double d = (b * b * b - b) * h * h / 6.0;
   return a * strikeMarks[i - 1].second + b * strikeMarks[i].second + c * y2[i - 1] + d * y2[i];
+}
+
+void CubicSmile::BuildInterpNotAKnot()
+{
+  int n = strikeMarks.size();
+  y2.resize(n);
+  vector<double> u(n - 1);
+
+  double sig, p;
+
+  y2[0] = 0.0;
+  u[0] = (3.0 / (strikeMarks[1].first - strikeMarks[0].first)) *
+         ((strikeMarks[1].second - strikeMarks[0].second) / (strikeMarks[1].first - strikeMarks[0].first));
+
+  for (int i = 1; i < n - 1; i++)
+  {
+    sig = (strikeMarks[i].first - strikeMarks[i - 1].first) / (strikeMarks[i + 1].first - strikeMarks[i - 1].first);
+    p = sig * y2[i - 1] + 2.0;
+    y2[i] = (sig - 1.0) / p;
+    u[i] = (strikeMarks[i + 1].second - strikeMarks[i].second) / (strikeMarks[i + 1].first - strikeMarks[i].first) - (strikeMarks[i].second - strikeMarks[i - 1].second) / (strikeMarks[i].first - strikeMarks[i - 1].first);
+    u[i] = (6.0 * u[i] / (strikeMarks[i + 1].first - strikeMarks[i - 1].first) - sig * u[i - 1]) / p;
+  }
+
+  y2[n - 1] = 0.0;
+
+  y2[n - 1] = (y2[n - 3] / 4.0 - y2[n - 2] / 2.0 - u[n - 2]) / (0.5 - y2[n - 2]);
+  for (int i = n - 2; i >= 0; i--)
+  {
+    y2[i] = y2[i] * y2[i + 1] + u[i];
+  }
+
+  y2[0] = y2[2] / 4.0 - y2[1] / 2.0;
 }
