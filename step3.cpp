@@ -5,6 +5,87 @@
 #include "VolSurfBuilder.h"
 #include "CubicSmile.h"
 
+//create header in output file
+void init_output_file(std::ofstream& file){
+    std::vector<std::string> col_vec{"TIME","EXPIRY","FUT_PRICE","ATM","BF25","RR25","BF10","RR10", "ERROR",
+                                        "BEFORE_ATM","BEFORE_BF25","BEFORE_RR25","BEFORE_BF10","BEFORE_RR10", "BEFORE_ERROR"};
+        // Send column names to the stream
+    for(auto j = 0U; j < col_vec.size(); ++j)
+    {
+        file << col_vec.at(j);
+        if(j != col_vec.size() - 1) file << ","; // No comma at end of line
+    }
+    file << "\n";
+}
+
+
+//ouput each smile at interval to file
+void output_file(std::ofstream& file, std::map<datetime_t, std::pair<CubicSmile, double> > &sonrisas, std::string tiempo_ahora){
+    for (auto iter = sonrisas.begin(); iter != sonrisas.end(); iter++) {
+        //auto sonrisa_obj = iter->second.first;
+
+        //std::cout <<iter->first  <<  iter->second.second << std::endl;
+        vector< pair<double, double> > strikemarks = iter->second.first.GetStrikeMarks();
+
+        double v_qd90 = strikemarks[0].second;
+        double v_qd75 = strikemarks[1].second;
+        double atmvol = strikemarks[2].second;
+        double v_qd25 = strikemarks[3].second;
+        double v_qd10 = strikemarks[4].second;
+
+        double bf25 = ((v_qd75 + v_qd25)/2.0) - atmvol;
+        double bf10 = ((v_qd90 + v_qd10)/2.0) - atmvol;
+        double rr25 = v_qd25 - v_qd75;
+        double rr10 = v_qd10 - v_qd90;
+
+        file << tiempo_ahora;
+        file << ",";
+        file << iter->first.year;
+        file << std::setw(2) << std::setfill('0') << iter->first.month;
+        file << std::setw(2) << std::setfill('0') << iter->first.day;
+        file << ",";
+        file << iter->second.first.precio_futuro;
+        file << ",";
+
+        file << atmvol;
+        file << ",";
+
+        file << bf25;
+        file << ",";
+
+        file << rr25;
+        file << ",";
+
+        file << bf10;
+        file << ",";
+
+        file << rr10;
+        file << ",";
+
+        file << iter->second.second;
+        file << ",";
+
+        file << iter->second.first.primer_guess[0];
+        file << ",";
+
+        file << iter->second.first.primer_guess[1];
+        file << ",";
+
+        file << iter->second.first.primer_guess[2];
+        file << ",";
+
+        file << iter->second.first.primer_guess[3];
+        file << ",";
+
+        file << iter->second.first.primer_guess[4];
+        file << ",";
+
+        file << iter->second.first.primer_error;
+        file << "\n";
+
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 3)
@@ -16,6 +97,9 @@ int main(int argc, char **argv)
     }
     const char *ticker_filename = argv[1];
     const char *output_filename = argv[2];
+
+    std::ofstream outputFile(output_filename);
+    init_output_file(outputFile);
     
 
     VolSurfBuilder<CubicSmile> volBuilder;
@@ -27,25 +111,13 @@ int main(int argc, char **argv)
         }
     };
 
-    auto timer_listener = [&volBuilder, &output_filename](uint64_t now_ms)
+    auto timer_listener = [&](uint64_t now_ms)
     {
+        std::string now_time_str = convert_msec_to_string(now_ms);
         // fit smile
         auto smiles = volBuilder.FitSmiles();
         // TODO: stream the smiles and their fitting error to outputFile.csv
-        std::ofstream outputFile(output_filename);
-        if (outputFile.is_open()) {
-            outputFile << "Date,Fitting Error" << std::endl;
-            
-            for (const auto& e: smiles) {
-                outputFile << e.first << "," << e.second.second << std::endl;
-            }
-
-            outputFile.close();
-        }
-
-        else {
-            std::cout << "Error opening the file" << std::endl;
-        }
+        output_file(outputFile, smiles, now_time_str);
             
     };
 
