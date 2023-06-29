@@ -7,6 +7,7 @@
 #include <iostream>
 #include <iomanip>
 #include "Date.h"
+#include <sstream>
 
 enum class Moneyness
 {

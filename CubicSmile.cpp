@@ -78,7 +78,7 @@ CubicSmile::CubicSmile(double underlyingPrice, double T, double atmvol, double b
   double k_qd90 = quickDeltaToStrike(0.9, underlyingPrice, stdev);
   double k_qd75 = quickDeltaToStrike(0.75, underlyingPrice, stdev);
   double k_qd25 = quickDeltaToStrike(0.25, underlyingPrice, stdev);
-  double k_qd10 = quickDeltaToStrike(0.25, underlyingPrice, stdev);
+  double k_qd10 = quickDeltaToStrike(0.10, underlyingPrice, stdev);
 
   strikeMarks.push_back(std::pair<double, double>(k_qd90, v_qd90));
   strikeMarks.push_back(std::pair<double, double>(k_qd75, v_qd75));
@@ -101,6 +101,7 @@ void CubicSmile::BuildInterp()
   u[0] = (3.0 / (strikeMarks[1].first - strikeMarks[0].first)) *
          ((strikeMarks[1].second - strikeMarks[0].second) / (strikeMarks[1].first - strikeMarks[0].first) - yp1);
 
+  // Calculate second derivatives at each point
   for (int i = 1; i < n - 1; i++)
   {
     double sig = (strikeMarks[i].first - strikeMarks[i - 1].first) / (strikeMarks[i + 1].first - strikeMarks[i - 1].first);

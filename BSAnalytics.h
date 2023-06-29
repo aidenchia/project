@@ -189,6 +189,38 @@ std::vector<TickData> filterOptions(const std::vector<TickData> &options, std::s
     return filteredOptions;
 }
 
+double extrapolateIV(vector<TickData> vecOptions, double quickDeltaStrike, bool useCallOption) {
+    
+    double extrapolatedVol;
+
+    if (useCallOption) {
+        TickData lastOption = vecOptions.back();
+        TickData secondLastOption = vecOptions[vecOptions.size() - 2];
+
+        double gradient = (lastOption.MarkIV - secondLastOption.MarkIV) / (lastOption.Strike - secondLastOption.Strike);
+        extrapolatedVol = lastOption.MarkIV + (quickDeltaStrike - lastOption.Strike) * gradient;
+        // while (extrapolatedVol > 100) {
+        //     extrapolatedVol -= log10(quickDeltaStrike - lastOption.Strike);
+        // }
+
+    }
+
+    else {
+        TickData firstOption = vecOptions.front();
+        TickData secondOption = vecOptions[1];
+
+        double gradient = (firstOption.MarkIV - secondOption.MarkIV) / (firstOption.Strike - secondOption.Strike);
+        extrapolatedVol = firstOption.MarkIV + (firstOption.Strike - quickDeltaStrike) * gradient;
+        while (extrapolatedVol < 0) {
+            extrapolatedVol += log10(firstOption.Strike - quickDeltaStrike);
+        }
+
+    }
+
+    return extrapolatedVol;
+
+}
+
 // TODO : TRY USING ALL THE VOLTICKERSNAP INSTEAD OF FILTERING SEE IF IT HANDLES THE CORNER CASE FOR CALL WITH LARGER K
 // TODO: ELSE TRY TO IMPLEMENT EXTRAPOLATION FOR CALL WITH LARGER K THAN CALLOPTIONS AND PUT WITH SMALLER K THAN PUTOPTIONS LIST. SEE WHICH IS BETTER
 double interpolateQuickDeltaIV(
@@ -206,7 +238,7 @@ double interpolateQuickDeltaIV(
         {
             // Extrapolate for call options
             // TODO: WIP IMPLEMENTATION 
-            double callVolatility = extrapolateIV(callOptions, quickDeltaStrike);
+            double callVolatility = extrapolateIV(callOptions, quickDeltaStrike, useCallOption);
             return callVolatility;
         }
         // Find the nearest call and put options to the quick delta strike
@@ -230,7 +262,7 @@ double interpolateQuickDeltaIV(
         {
             // Extrapolate for put options
             // TODO: WIP IMPLEMENTATION
-            double putVolatility = extrapolateIV(putOptions, quickDeltaStrike);
+            double putVolatility = extrapolateIV(putOptions, quickDeltaStrike, useCallOption);
             return putVolatility;
         }
         auto putOption = std::lower_bound(putOptions.begin(), putOptions.end(), quickDeltaStrike,

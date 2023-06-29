@@ -15,6 +15,8 @@ int main(int argc, char **argv)
         return 1;
     }
     const char *ticker_filename = argv[1];
+    const char *output_filename = argv[2];
+    
 
     VolSurfBuilder<CubicSmile> volBuilder;
     auto feeder_listener = [&volBuilder](const Msg &msg)
@@ -25,11 +27,23 @@ int main(int argc, char **argv)
         }
     };
 
-    auto timer_listener = [&volBuilder](uint64_t now_ms)
+    auto timer_listener = [&volBuilder, &output_filename](uint64_t now_ms)
     {
         // fit smile
         auto smiles = volBuilder.FitSmiles();
         // TODO: stream the smiles and their fitting error to outputFile.csv
+        std::ofstream outputFile(output_filename);
+        // if (outputFile.is_open()) {
+        //     outputFile << "Date,Smile,Vol" << std::endl;
+            
+        //     for (const auto& e: smiles) {
+        //         const datetime_t& timestamp = e.first;
+        //         const  smile = e.second;
+        //     }
+        // }
+
+
+
     };
 
     const auto interval = std::chrono::minutes(1); // we call timer_listener at 1 minute interval
