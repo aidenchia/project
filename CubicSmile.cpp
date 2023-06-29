@@ -40,7 +40,7 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   datetime_t currentTimeStamp(volTickerSnap[0].LastUpdateTimeStamp / 1000);
   datetime_t expiryDate = volTickerSnap[0].ExpiryDate;
   // getting the time to maturity
-  T = expiryDate - currentTimeStamp;
+  T = (expiryDate - currentTimeStamp) / 365;
   T = T  < 0.001 ? 0.001 : T;
 
   atmvol = GetATMVolatility(volTickerSnap, fwd);

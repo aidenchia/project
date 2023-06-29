@@ -33,14 +33,17 @@ int main(int argc, char **argv)
         auto smiles = volBuilder.FitSmiles();
         // TODO: stream the smiles and their fitting error to outputFile.csv
         std::ofstream outputFile(output_filename);
-        // if (outputFile.is_open()) {
-        //     outputFile << "Date,Smile,Vol" << std::endl;
+        if (outputFile.is_open()) {
+            outputFile << "Date,Smile,Vol" << std::endl;
             
-        //     for (const auto& e: smiles) {
-        //         const datetime_t& timestamp = e.first;
-        //         const  smile = e.second;
-        //     }
-        // }
+            for (const auto& e: smiles) {
+                const datetime_t& timestamp = e.first;
+                const auto smile = e.second.first;
+                const double fittingError = e.second.second;
+                
+                
+            }
+        }
 
 
 

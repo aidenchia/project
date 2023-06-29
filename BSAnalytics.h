@@ -199,9 +199,6 @@ double extrapolateIV(vector<TickData> vecOptions, double quickDeltaStrike, bool 
 
         double gradient = (lastOption.MarkIV - secondLastOption.MarkIV) / (lastOption.Strike - secondLastOption.Strike);
         extrapolatedVol = lastOption.MarkIV + (quickDeltaStrike - lastOption.Strike) * gradient;
-        // while (extrapolatedVol > 100) {
-        //     extrapolatedVol -= log10(quickDeltaStrike - lastOption.Strike);
-        // }
 
     }
 
@@ -209,13 +206,11 @@ double extrapolateIV(vector<TickData> vecOptions, double quickDeltaStrike, bool 
         TickData firstOption = vecOptions.front();
         TickData secondOption = vecOptions[1];
 
-        double gradient = (firstOption.MarkIV - secondOption.MarkIV) / (firstOption.Strike - secondOption.Strike);
+        double gradient = (firstOption.MarkIV - secondOption.MarkIV) / (secondOption.Strike - firstOption.Strike);
         extrapolatedVol = firstOption.MarkIV + (firstOption.Strike - quickDeltaStrike) * gradient;
-        while (extrapolatedVol < 0) {
-            extrapolatedVol += log10(firstOption.Strike - quickDeltaStrike);
-        }
-
     }
+
+    assert(extrapolatedVol > 0);
 
     return extrapolatedVol;
 
