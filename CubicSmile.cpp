@@ -12,8 +12,6 @@ using namespace LBFGSpp;
 typedef double Scalar;
 typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
 
-
-
 std::pair<double, double> GetMaxValues(const std::vector<TickData> &volTickerSnap)
 {
   double maxOpenInterest = 0.0;
@@ -36,15 +34,13 @@ std::pair<double, double> GetMaxValues(const std::vector<TickData> &volTickerSna
   return std::make_pair(maxOpenInterest, maxSpread);
 }
 
-
-
 double CalculateWeight(const TickData &tickdata, double maxOpenInterest, double maxSpread)
 {
 
   double normOpenInterest = tickdata.OpenInterest / maxOpenInterest;
-  std::cout << "normOpenInterest = " << normOpenInterest << std::endl;
   double normSpread = (tickdata.BestAskPrice - tickdata.BestBidPrice) / maxSpread;
-  std::cout << "normSpread = " << normSpread << std::endl;
+  // std::cout << "normOpenInterest = " << normOpenInterest << std::endl;
+  // std::cout << "normSpread = " << normSpread << std::endl;
   return (normOpenInterest + normSpread) / 2.0;
 }
 
@@ -112,7 +108,11 @@ public:
   }
   Scalar operator()(const Vector &x, Vector &grad)
   {
-
+    // TODO: implement regularization or tune the learning rate
+    // you can influence this indirectly with parameters like min_step and max_step, ftol and wolfe, and the choice of line search algorithm (linesearch):
+    // min_step and max_step set the lower and upper bounds on the step size that the line search algorithm can take in any single iteration. If you want to effectively lower the learning rate, you could decrease the max_step value.
+    // ftol and wolfe control the accuracy of the line search routine. Lowering ftol or increasing wolfe can make the line search more stringent, which might effectively result in smaller steps, i.e., lower learning rate.
+    // The linesearch parameter can be set to different line search algorithms which have different properties that might affect the step length.
     auto sm = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4]);
     Scalar fx = sm.CalculateFittingError(TickDataVec, sm);
 
@@ -123,17 +123,37 @@ public:
     auto sm_4u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3] + 0.001, x[4]);
     auto sm_5u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4] + 0.001);
 
-    grad[0] = (sm_1u.CalculateFittingError(TickDataVec, sm_1u) - fx) / 0.001;
-    grad[1] = (sm_2u.CalculateFittingError(TickDataVec, sm_2u) - fx) / 0.001;
-    grad[2] = (sm_3u.CalculateFittingError(TickDataVec, sm_3u) - fx) / 0.001;
-    grad[3] = (sm_4u.CalculateFittingError(TickDataVec, sm_4u) - fx) / 0.001;
-    grad[4] = (sm_5u.CalculateFittingError(TickDataVec, sm_5u) - fx) / 0.001;
+    // auto sm_1d = CubicSmile(ForwardPrice, time_to_exp, x[0] - 0.001, x[1], x[2], x[3], x[4]);
+    // auto sm_2d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1] - 0.001, x[2], x[3], x[4]);
+    // auto sm_3d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2] - 0.001, x[3], x[4]);
+    // auto sm_4d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3] - 0.001, x[4]);
+    // auto sm_5d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4] - 0.001);
+
+    // forward diff
+    grad[0] = (sm_1u.CalculateFittingError(TickDataVec, sm_1u) - fx)) / 0.001;
+    grad[1] = (sm_2u.CalculateFittingError(TickDataVec, sm_2u) - fx)) / 0.001;
+    grad[2] = (sm_3u.CalculateFittingError(TickDataVec, sm_3u) - fx)) / 0.001;
+    grad[3] = (sm_4u.CalculateFittingError(TickDataVec, sm_4u) - fx)) / 0.001;
+    grad[4] = (sm_5u.CalculateFittingError(TickDataVec, sm_5u) - fx)) / 0.001;
+
+    // central diff
+    // grad[0] = (sm_1u.CalculateFittingError(TickDataVec, sm_1u) - sm_1d.CalculateFittingError(TickDataVec, sm_1d)) / 0.002;
+    // grad[1] = (sm_2u.CalculateFittingError(TickDataVec, sm_2u) - sm_2d.CalculateFittingError(TickDataVec, sm_2d)) / 0.002;
+    // grad[2] = (sm_3u.CalculateFittingError(TickDataVec, sm_3u) - sm_3d.CalculateFittingError(TickDataVec, sm_3d)) / 0.002;
+    // grad[3] = (sm_4u.CalculateFittingError(TickDataVec, sm_4u) - sm_4d.CalculateFittingError(TickDataVec, sm_4d)) / 0.002;
+    // grad[4] = (sm_5u.CalculateFittingError(TickDataVec, sm_5u) - sm_5d.CalculateFittingError(TickDataVec, sm_5d)) / 0.002;
+
+    // Print the gradient values to the console
+    std::cout << "Gradient values: "
+              << "grad[0] = " << grad[0] << ", "
+              << "grad[1] = " << grad[1] << ", "
+              << "grad[2] = " << grad[2] << ", "
+              << "grad[3] = " << grad[3] << ", "
+              << "grad[4] = " << grad[4] << std::endl;
 
     return fx;
   }
 };
-
-
 
 CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
 {
@@ -199,6 +219,9 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   // Define parameters
   const int n = 5;
   LBFGSBParam<Scalar> param;
+  param.max_step = 0.1; // Lower max_step value
+  param.ftol = 1e-6;    // Lower ftol value
+  param.wolfe = 0.95;   // Increase wolfe value
   param.max_linesearch = 100;
 
   LBFGSBSolver<Scalar> solver(param);
@@ -238,11 +261,11 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
     std::cerr << "An unknown error occurred." << std::endl;
   }
 
-  return CubicSmile(fwd, T, x[0], x[1], x[2], x[3], x[4], {atmvol, bf25, rr25, bf10, rr10} );
+  return CubicSmile(fwd, T, x[0], x[1], x[2], x[3], x[4], {atmvol, bf25, rr25, bf10, rr10});
 }
 
-CubicSmile::CubicSmile(double underlyingPrice, double T, double atmvol, 
-double bf25, double rr25, double bf10, double rr10, std::vector<double> init_guess, double init_error)
+CubicSmile::CubicSmile(double underlyingPrice, double T, double atmvol,
+                       double bf25, double rr25, double bf10, double rr10, std::vector<double> init_guess, double init_error)
 {
   // convert delta marks to strike vol marks, setup strikeMarks, then call BUildInterp
   double v_qd90 = atmvol + bf10 - rr10 / 2.0;
@@ -263,18 +286,17 @@ double bf25, double rr25, double bf10, double rr10, std::vector<double> init_gue
   strikeMarks.push_back(std::pair<double, double>(k_qd25, v_qd25));
   strikeMarks.push_back(std::pair<double, double>(k_qd10, v_qd10));
 
-    precio_futuro = underlyingPrice;
-    primer_guess = init_guess;
-    primer_error = init_error;
+  precio_futuro = underlyingPrice;
+  primer_guess = init_guess;
+  primer_error = init_error;
 
   BuildInterp();
   // BuildInterpNotAKnot();
 }
 
-
 vector<pair<double, double>> CubicSmile::GetStrikeMarks()
 {
-    return strikeMarks;
+  return strikeMarks;
 }
 
 void CubicSmile::BuildInterp()
@@ -365,34 +387,34 @@ double CubicSmile::Vol(double strike) const
 /**
  * The fitting error some how become very bad shall not use this
  */
-void CubicSmile::BuildInterpNotAKnot()
-{
-  int n = strikeMarks.size();
-  y2.resize(n);
-  vector<double> u(n - 1);
+// void CubicSmile::BuildInterpNotAKnot()
+// {
+//   int n = strikeMarks.size();
+//   y2.resize(n);
+//   vector<double> u(n - 1);
 
-  double sig, p;
+//   double sig, p;
 
-  y2[0] = 0.0;
-  u[0] = (3.0 / (strikeMarks[1].first - strikeMarks[0].first)) *
-         ((strikeMarks[1].second - strikeMarks[0].second) / (strikeMarks[1].first - strikeMarks[0].first));
+//   y2[0] = 0.0;
+//   u[0] = (3.0 / (strikeMarks[1].first - strikeMarks[0].first)) *
+//          ((strikeMarks[1].second - strikeMarks[0].second) / (strikeMarks[1].first - strikeMarks[0].first));
 
-  for (int i = 1; i < n - 1; i++)
-  {
-    sig = (strikeMarks[i].first - strikeMarks[i - 1].first) / (strikeMarks[i + 1].first - strikeMarks[i - 1].first);
-    p = sig * y2[i - 1] + 2.0;
-    y2[i] = (sig - 1.0) / p;
-    u[i] = (strikeMarks[i + 1].second - strikeMarks[i].second) / (strikeMarks[i + 1].first - strikeMarks[i].first) - (strikeMarks[i].second - strikeMarks[i - 1].second) / (strikeMarks[i].first - strikeMarks[i - 1].first);
-    u[i] = (6.0 * u[i] / (strikeMarks[i + 1].first - strikeMarks[i - 1].first) - sig * u[i - 1]) / p;
-  }
+//   for (int i = 1; i < n - 1; i++)
+//   {
+//     sig = (strikeMarks[i].first - strikeMarks[i - 1].first) / (strikeMarks[i + 1].first - strikeMarks[i - 1].first);
+//     p = sig * y2[i - 1] + 2.0;
+//     y2[i] = (sig - 1.0) / p;
+//     u[i] = (strikeMarks[i + 1].second - strikeMarks[i].second) / (strikeMarks[i + 1].first - strikeMarks[i].first) - (strikeMarks[i].second - strikeMarks[i - 1].second) / (strikeMarks[i].first - strikeMarks[i - 1].first);
+//     u[i] = (6.0 * u[i] / (strikeMarks[i + 1].first - strikeMarks[i - 1].first) - sig * u[i - 1]) / p;
+//   }
 
-  y2[n - 1] = 0.0;
+//   y2[n - 1] = 0.0;
 
-  y2[n - 1] = (y2[n - 3] / 4.0 - y2[n - 2] / 2.0 - u[n - 2]) / (0.5 - y2[n - 2]);
-  for (int i = n - 2; i >= 0; i--)
-  {
-    y2[i] = y2[i] * y2[i + 1] + u[i];
-  }
+//   y2[n - 1] = (y2[n - 3] / 4.0 - y2[n - 2] / 2.0 - u[n - 2]) / (0.5 - y2[n - 2]);
+//   for (int i = n - 2; i >= 0; i--)
+//   {
+//     y2[i] = y2[i] * y2[i + 1] + u[i];
+//   }
 
-  y2[0] = y2[2] / 4.0 - y2[1] / 2.0;
-}
+//   y2[0] = y2[2] / 4.0 - y2[1] / 2.0;
+// }

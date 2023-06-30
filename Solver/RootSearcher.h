@@ -7,8 +7,8 @@
 
 double rfbisect(std::function<double(double)> f, double a, double b, double tol)
 {
-    std::cout << "f(a) = " << f(a) << std::endl;
-    std::cout << "f(b) = " << f(b) << std::endl;
+    // std::cout << "f(a) = " << f(a) << std::endl;
+    // std::cout << "f(b) = " << f(b) << std::endl;
 
     assert(a < b && f(a) * f(b) < 0);
     double c;
@@ -18,7 +18,7 @@ double rfbisect(std::function<double(double)> f, double a, double b, double tol)
         // std::cout << "(a, b) = (" << a << ", " << b << ")" << std::endl;
         if (std::abs(f(c)) < tol)
         {
-            std::cout << "C = " << c << std::endl;
+            // std::cout << "C = " << c << std::endl;
             return c;
         }
         else
@@ -29,7 +29,7 @@ double rfbisect(std::function<double(double)> f, double a, double b, double tol)
                 a = c;
         }
     }
-    std::cout << "C = " << c << std::endl;
+    // std::cout << "C = " << c << std::endl;
     return c;
 }
 
