@@ -12,6 +12,8 @@ using namespace LBFGSpp;
 typedef double Scalar;
 typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
 
+
+
 std::pair<double, double> GetMaxValues(const std::vector<TickData> &volTickerSnap)
 {
   double maxOpenInterest = 0.0;
@@ -34,8 +36,11 @@ std::pair<double, double> GetMaxValues(const std::vector<TickData> &volTickerSna
   return std::make_pair(maxOpenInterest, maxSpread);
 }
 
-double CalculateWeight(const TickData &tickdata)
+
+
+double CalculateWeight(const TickData &tickdata, double maxOpenInterest, double maxSpread)
 {
+
   double normOpenInterest = tickdata.OpenInterest / maxOpenInterest;
   std::cout << "normOpenInterest = " << normOpenInterest << std::endl;
   double normSpread = (tickdata.BestAskPrice - tickdata.BestBidPrice) / maxSpread;
@@ -43,17 +48,22 @@ double CalculateWeight(const TickData &tickdata)
   return (normOpenInterest + normSpread) / 2.0;
 }
 
-double CalculateFittingError(const std::vector<TickData> &volTickerSnap, const CubicSmile &sm)
+double CubicSmile::CalculateFittingError(const std::vector<TickData> &volTickerSnap, const CubicSmile &sm)
 {
   double fittingError = 0.0;
   double sumWeights = 0.0;
 
-  GetMaxValues(volTickerSnap);
+  // GetMaxValues(volTickerSnap); //
+
+  // Get the maximum values for weight calculation
+  std::pair<double, double> maxValues = GetMaxValues(volTickerSnap);
+  double maxOpenInterest = maxValues.first;
+  double maxSpread = maxValues.second;
 
   for (const TickData &tickData : volTickerSnap)
   {
     // Calculate weight based on liquidity, open interest, bid-ask spread
-    double weight = CalculateWeight(tickData);
+    double weight = CalculateWeight(tickData, maxOpenInterest, maxSpread);
     std::cout << "TickData contract = " << tickData.ContractName << std::endl;
     std::cout << "weight = " << weight << std::endl;
     // Calculate average implied volatility
@@ -104,7 +114,7 @@ public:
   {
 
     auto sm = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4]);
-    Scalar fx = CalculateFittingError(TickDataVec, sm);
+    Scalar fx = sm.CalculateFittingError(TickDataVec, sm);
 
     // use forward difference to reduce computation
     auto sm_1u = CubicSmile(ForwardPrice, time_to_exp, x[0] + 0.001, x[1], x[2], x[3], x[4]);
@@ -113,15 +123,17 @@ public:
     auto sm_4u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3] + 0.001, x[4]);
     auto sm_5u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4] + 0.001);
 
-    grad[0] = (CalculateFittingError(TickDataVec, sm_1u) - fx) / 0.001;
-    grad[1] = (CalculateFittingError(TickDataVec, sm_2u) - fx) / 0.001;
-    grad[2] = (CalculateFittingError(TickDataVec, sm_3u) - fx) / 0.001;
-    grad[3] = (CalculateFittingError(TickDataVec, sm_4u) - fx) / 0.001;
-    grad[4] = (CalculateFittingError(TickDataVec, sm_5u) - fx) / 0.001;
+    grad[0] = (sm_1u.CalculateFittingError(TickDataVec, sm_1u) - fx) / 0.001;
+    grad[1] = (sm_2u.CalculateFittingError(TickDataVec, sm_2u) - fx) / 0.001;
+    grad[2] = (sm_3u.CalculateFittingError(TickDataVec, sm_3u) - fx) / 0.001;
+    grad[3] = (sm_4u.CalculateFittingError(TickDataVec, sm_4u) - fx) / 0.001;
+    grad[4] = (sm_5u.CalculateFittingError(TickDataVec, sm_5u) - fx) / 0.001;
 
     return fx;
   }
 };
+
+
 
 CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
 {
@@ -182,7 +194,7 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
 
   auto sm = CubicSmile(fwd, T, atmvol, bf25, rr25, bf10, rr10);
   std::tie(sm.maxOpenInterest, sm.maxSpread) = GetMaxValues(volTickerSnap);
-  double fittingError = CalculateFittingError(volTickerSnap, sm);
+  double fittingError = sm.CalculateFittingError(volTickerSnap, sm);
 
   // Define parameters
   const int n = 5;
@@ -190,7 +202,7 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   param.max_linesearch = 100;
 
   LBFGSBSolver<Scalar> solver(param);
-  OptimiserFunctionObj fun(volTickerSnap, fwd, time_to_expiry);
+  OptimiserFunctionObj fun(volTickerSnap, fwd, T);
 
   // Variable bounds
   Vector lb = Vector::Constant(n, -10.0);
