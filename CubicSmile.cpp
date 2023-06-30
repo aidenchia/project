@@ -64,8 +64,8 @@ double CubicSmile::CalculateFittingError(const std::vector<TickData> &volTickerS
   {
     // Calculate weight based on liquidity, open interest, bid-ask spread
     double weight = CalculateWeight(tickData, maxOpenInterest, maxSpread);
-    std::cout << "TickData contract = " << tickData.ContractName << std::endl;
-    std::cout << "weight = " << weight << std::endl;
+    // std::cout << "TickData contract = " << tickData.ContractName << std::endl;
+    // std::cout << "weight = " << weight << std::endl;
     // Calculate average implied volatility
     double sigma_i = (tickData.BestBidIV + tickData.BestAskIV) / 2.0;
 
@@ -75,9 +75,9 @@ double CubicSmile::CalculateFittingError(const std::vector<TickData> &volTickerS
 
     // Calculate difference and multiply by weight
     double diff = sigma_i - sigma_ki;
-    std::cout << "sigma difference = " << diff << std::endl;
     double weightedDiff = diff * weight;
-    std::cout << "weightedDiff = " << weightedDiff << std::endl;
+    // std::cout << "sigma difference = " << diff << std::endl;
+    // std::cout << "weightedDiff = " << weightedDiff << std::endl;
 
     // Update fitting error and sum of weights
     fittingError += weightedDiff;
@@ -90,8 +90,8 @@ double CubicSmile::CalculateFittingError(const std::vector<TickData> &volTickerS
     fittingError /= sumWeights;
   }
 
-  std::cout << "fittingError = " << fittingError << std::endl;
-  std::cout << "sumWeights = " << sumWeights << std::endl;
+  // std::cout << "fittingError = " << fittingError << std::endl;
+  // std::cout << "sumWeights = " << sumWeights << std::endl;
   return fittingError;
 }
 

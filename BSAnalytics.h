@@ -61,9 +61,9 @@ double bsUndisc(OptionType optType, double k, double fwd, double T, double sigma
 // qd = N(log(F/K) / stdev), so K = F / exp((N^{-1}(qd) * stdev))
 double quickDeltaToStrike(double qd, double fwd, double stdev)
 {
-    std::cout << "quick delta " << qd << std::endl;
     double inv = invcnorm(qd);
-    std::cout << " to strike of : " << fwd / std::exp(inv * stdev) << std::endl;
+    // std::cout << "quick delta " << qd << std::endl;
+    // std::cout << " to strike of : " << fwd / std::exp(inv * stdev) << std::endl;
     return fwd / std::exp(inv * stdev);
 }
 
