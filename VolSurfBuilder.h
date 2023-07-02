@@ -72,6 +72,12 @@ std::map<datetime_t, std::pair<Smile, double>> VolSurfBuilder<Smile>::FitSmiles(
 
         datetime_t expiryDate = td.ExpiryDate;
 
+        // Skip adding tick data if it is ITM
+        if (td.moneyness == Moneyness::ITM)
+        {
+            continue;
+        }
+
         if (tickersByExpiry.count(expiryDate) == 0)
         {
             std::vector<TickData> new_vector{td};

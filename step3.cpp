@@ -4,7 +4,7 @@
 #include "Msg.h"
 #include "VolSurfBuilder.h"
 #include "CubicSmile.h"
-#include "helper.cpp"
+#include "helper.h"
 
 //create header in output file
 void init_output_file(std::ofstream& file){

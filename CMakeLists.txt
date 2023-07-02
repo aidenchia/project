@@ -54,7 +54,6 @@ set(SOURCES_STEP3
     CubicSmile.h
     Date.cpp
     helper.h
-    helper.cpp
 )
 
 # Create the executable for step3
