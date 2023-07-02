@@ -235,4 +235,17 @@ double interpolateQuickDeltaIV(
     return 0.0; // or any other appropriate default value
 }
 
+// double check if i need to make the iv same 
+// double getMSE(const std::vector<TickData>& volTickerSnap, const CubicSmile& cs)
+// {
+//     double total_error = 0;
+//     for (const TickData& tickdata : volTickerSnap) {
+//         double error = pow(tickdata.MarkIV/100 - cs.Vol(tickdata.Strike)/100, 2);
+//         total_error += error;
+//     }
+
+//     return total_error / volTickerSnap.size();
+// }
+
+
 #endif

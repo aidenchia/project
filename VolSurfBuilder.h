@@ -7,6 +7,7 @@
 #include <sstream>
 #include <iomanip>
 #include "CubicSmile.h"
+#include "helper.h"
 
 template <class Smile>
 class VolSurfBuilder
@@ -93,46 +94,12 @@ std::map<datetime_t, std::pair<Smile, double>> VolSurfBuilder<Smile>::FitSmiles(
         // }
         auto sm = Smile::FitSmile(iter->second);
         // TODO: you need to implement FitSmile function in CubicSmile
-        // TODO (Step 3): we need to measure the fitting error here
+        // TODO (Step 3): we need to measure the fitting error here.
 
-        // CalculateFittingError is only called when Smile is CubicSmile.
-        if constexpr (std::is_same<Smile, CubicSmile>::value) {
-            double fittingError = sm.CalculateFittingError(iter->second, sm);
-            res.insert(std::pair<datetime_t, std::pair<Smile, double>>(iter->first, std::pair<Smile, double>(sm, fittingError)));
-        }
+        double fittingError = CalculateFittingError(iter->second, sm);
+        res.insert(std::pair<datetime_t, std::pair<Smile, double>>(iter->first, std::pair<Smile, double>(sm, fittingError)));
     }
     return res;
-}
-
-//function to convert epoch time in millisec to string eg 2022-07-02T01:38:07.232Z
-std::string convert_msec_to_string(uint64_t m){
-    using Clock = std::chrono::system_clock;
-    using Precision = std::chrono::milliseconds;
-    std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>
-        tp{std::chrono::milliseconds{m}};
-    std::stringstream sss;
-    std::string time_in_str;
-
-    // extract std::time_t from time_point
-    std::time_t t = Clock::to_time_t(tp);
-
-    // output the part supported by std::tm
-    sss << std::put_time(std::localtime(&t), "%FT%T.");
-
-    // get duration since epoch
-    auto dur = tp.time_since_epoch();
-
-    // extract the sub second part from the duration since epoch
-    auto ss =
-        std::chrono::duration_cast<Precision>(dur) % std::chrono::seconds{1};
-
-    // output the millisecond part
-    sss<< std::setfill('0') << std::setw(3) << ss.count();
-    sss<< "Z";
-
-    sss>>time_in_str;
-
-    return time_in_str;
 }
 
 #endif // QF633_CODE_VOLSURFBUILDER_H

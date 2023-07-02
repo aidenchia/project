@@ -4,6 +4,7 @@
 #include "Msg.h"
 #include "VolSurfBuilder.h"
 #include "CubicSmile.h"
+#include "helper.cpp"
 
 //create header in output file
 void init_output_file(std::ofstream& file){
@@ -44,7 +45,7 @@ void output_file(std::ofstream& file, std::map<datetime_t, std::pair<CubicSmile,
         file << std::setw(2) << std::setfill('0') << iter->first.month;
         file << std::setw(2) << std::setfill('0') << iter->first.day;
         file << ",";
-        file << iter->second.first.precio_futuro;
+        file << iter->second.first.future_price;
         file << ",";
 
         file << atmvol;

@@ -17,12 +17,11 @@ public:
   CubicSmile(double underlyingPrice, double T, double atmvol, double bf25, double rr25, double bf10, double rr10, vector<double> init_guess = {0, 0, 0, 0, 0}, double init_error = 0.0); // convert parameters to strikeMarks, then call BuildInterp() to create the cubic spline interpolator
   double Vol(double strike) const;
 
-  double CalculateFittingError(const std::vector<TickData> &volTickerSnap, const CubicSmile &sm);
-
   vector<pair<double, double>> GetStrikeMarks();
-  double precio_futuro;
+  double future_price;
   vector<double> primer_guess;
   double primer_error; // interpolate
+  double maxOpenInterest, maxSpread;
 
 private:
   void BuildInterp();
@@ -30,7 +29,6 @@ private:
   // strike to implied vol marks
   vector<pair<double, double>> strikeMarks;
   vector<double> y2; // second derivatives
-  double maxOpenInterest, maxSpread;
 
 };
 

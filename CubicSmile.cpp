@@ -7,153 +7,143 @@
 
 #include "Solver/Eigen/Core"
 #include "Solver/LBFGSB.h"
+#include "helper.cpp"
 
 using namespace LBFGSpp;
 typedef double Scalar;
 typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
 
-std::pair<double, double> GetMaxValues(const std::vector<TickData> &volTickerSnap)
-{
-  double maxOpenInterest = 0.0;
-  double maxSpread = 0.0;
+// class OptimiserFunctionObj
+// {
+// private:
+//   std::vector<TickData> TickDataVec;
+//   double ForwardPrice;
+//   double time_to_exp;
+//   Scalar lambda = 0.1;
 
-  for (const TickData &tickData : volTickerSnap)
-  {
-    // Update the maximum open interest if necessary
-    if (tickData.OpenInterest > maxOpenInterest)
-      maxOpenInterest = tickData.OpenInterest;
+// public:
+//   OptimiserFunctionObj(std::vector<TickData> volTickerSnap,
+//                        double fwd,
+//                        double T) : TickDataVec(volTickerSnap),
+//                                    ForwardPrice(fwd),
+//                                    time_to_exp(T)
+//   {
+//   }
+//   Scalar operator()(const Vector &x, Vector &grad)
+//   {
+//     // TODO: implement regularization or tune the learning rate
+//     // you can influence this indirectly with parameters like min_step and max_step, ftol and wolfe, and the choice of line search algorithm (linesearch):
+//     // min_step and max_step set the lower and upper bounds on the step size that the line search algorithm can take in any single iteration. If you want to effectively lower the learning rate, you could decrease the max_step value.
+//     // ftol and wolfe control the accuracy of the line search routine. Lowering ftol or increasing wolfe can make the line search more stringent, which might effectively result in smaller steps, i.e., lower learning rate.
+//     // The linesearch parameter can be set to different line search algorithms which have different properties that might affect the step length.
+//     auto sm = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4]);
+//     Scalar fx = sm.CalculateFittingError(TickDataVec, sm);
 
-    // Calculate the spread
-    double spread = tickData.BestAskPrice - tickData.BestBidPrice;
+//     // Adding L2 regularization to the cost function
+//     // Scalar reg_term = 0.5 * lambda * x.squaredNorm();
+//     // fx += reg_term;
 
-    // Update the maximum spread if necessary
-    if (spread > maxSpread)
-      maxSpread = spread;
-  }
+//     // use forward difference to reduce computation
+//     auto sm_1u = CubicSmile(ForwardPrice, time_to_exp, x[0] + 0.001, x[1], x[2], x[3], x[4]);
+//     auto sm_2u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1] + 0.001, x[2], x[3], x[4]);
+//     auto sm_3u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2] + 0.001, x[3], x[4]);
+//     auto sm_4u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3] + 0.001, x[4]);
+//     auto sm_5u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4] + 0.001);
 
-  return std::make_pair(maxOpenInterest, maxSpread);
-}
+//     auto sm_1d = CubicSmile(ForwardPrice, time_to_exp, x[0] - 0.001, x[1], x[2], x[3], x[4]);
+//     auto sm_2d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1] - 0.001, x[2], x[3], x[4]);
+//     auto sm_3d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2] - 0.001, x[3], x[4]);
+//     auto sm_4d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3] - 0.001, x[4]);
+//     auto sm_5d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4] - 0.001);
 
-double CalculateWeight(const TickData &tickdata, double maxOpenInterest, double maxSpread)
-{
+//     // forward diff
+//     // grad[0] = (sm_1u.CalculateFittingError(TickDataVec, sm_1u) - fx) / 0.001 + lambda * x[0];
+//     // grad[1] = (sm_2u.CalculateFittingError(TickDataVec, sm_2u) - fx) / 0.001 + lambda * x[1];
+//     // grad[2] = (sm_3u.CalculateFittingError(TickDataVec, sm_3u) - fx) / 0.001 + lambda * x[2];
+//     // grad[3] = (sm_4u.CalculateFittingError(TickDataVec, sm_4u) - fx) / 0.001 + lambda * x[3];
+//     // grad[4] = (sm_5u.CalculateFittingError(TickDataVec, sm_5u) - fx) / 0.001 + lambda * x[4];
+//     // grad[0] = (sm_1u.CalculateFittingError(TickDataVec, sm_1u) - fx) / 0.001;
+//     // grad[1] = (sm_2u.CalculateFittingError(TickDataVec, sm_2u) - fx) / 0.001;
+//     // grad[2] = (sm_3u.CalculateFittingError(TickDataVec, sm_3u) - fx) / 0.001;
+//     // grad[3] = (sm_4u.CalculateFittingError(TickDataVec, sm_4u) - fx) / 0.001;
+//     // grad[4] = (sm_5u.CalculateFittingError(TickDataVec, sm_5u) - fx) / 0.001;
 
-  double normOpenInterest = tickdata.OpenInterest / maxOpenInterest;
-  double normSpread = (tickdata.BestAskPrice - tickdata.BestBidPrice) / maxSpread;
-  // std::cout << "normOpenInterest = " << normOpenInterest << std::endl;
-  // std::cout << "normSpread = " << normSpread << std::endl;
-  return (normOpenInterest + normSpread) / 2.0;
-}
+//     // central diff
+//     // grad[0] = (sm_1u.CalculateFittingError(TickDataVec, sm_1u) - sm_1d.CalculateFittingError(TickDataVec, sm_1d)) / 0.002;
+//     // grad[1] = (sm_2u.CalculateFittingError(TickDataVec, sm_2u) - sm_2d.CalculateFittingError(TickDataVec, sm_2d)) / 0.002;
+//     // grad[2] = (sm_3u.CalculateFittingError(TickDataVec, sm_3u) - sm_3d.CalculateFittingError(TickDataVec, sm_3d)) / 0.002;
+//     // grad[3] = (sm_4u.CalculateFittingError(TickDataVec, sm_4u) - sm_4d.CalculateFittingError(TickDataVec, sm_4d)) / 0.002;
+//     // grad[4] = (sm_5u.CalculateFittingError(TickDataVec, sm_5u) - sm_5d.CalculateFittingError(TickDataVec, sm_5d)) / 0.002;
+//     grad[0] = (getMSE(sm_1u, TickDataVec) - getMSE(sm_1d, TickDataVec)) / 0.002;
+//     grad[1] = (getMSE(sm_2u, TickDataVec) - getMSE(sm_2d, TickDataVec)) / 0.002;
+//     grad[2] = (getMSE(sm_3u, TickDataVec) - getMSE(sm_3d, TickDataVec)) / 0.002;
+//     grad[3] = (getMSE(sm_4u, TickDataVec) - getMSE(sm_4d, TickDataVec)) / 0.002;
+//     grad[4] = (getMSE(sm_5u, TickDataVec) - getMSE(sm_5d, TickDataVec)) / 0.002;
 
-double CubicSmile::CalculateFittingError(const std::vector<TickData> &volTickerSnap, const CubicSmile &sm)
-{
-  double fittingError = 0.0;
-  double sumWeights = 0.0;
+//     // Print the gradient values to the console
+//     std::cout << "Gradient values: "
+//               << "grad[0] = " << grad[0] << ", "
+//               << "grad[1] = " << grad[1] << ", "
+//               << "grad[2] = " << grad[2] << ", "
+//               << "grad[3] = " << grad[3] << ", "
+//               << "grad[4] = " << grad[4] << std::endl;
 
-  // GetMaxValues(volTickerSnap); //
+//     return fx;
+//   }
+// };
 
-  // Get the maximum values for weight calculation
-  std::pair<double, double> maxValues = GetMaxValues(volTickerSnap);
-  double maxOpenInterest = maxValues.first;
-  double maxSpread = maxValues.second;
-
-  for (const TickData &tickData : volTickerSnap)
-  {
-    // Calculate weight based on liquidity, open interest, bid-ask spread
-    double weight = CalculateWeight(tickData, maxOpenInterest, maxSpread);
-    // std::cout << "TickData contract = " << tickData.ContractName << std::endl;
-    // std::cout << "weight = " << weight << std::endl;
-    // Calculate average implied volatility
-    double sigma_i = (tickData.BestBidIV + tickData.BestAskIV) / 2.0;
-
-    // Calculate model implied volatility
-    // TODO: Check why is this nan
-    double sigma_ki = sm.Vol(tickData.Strike);
-
-    // Calculate difference and multiply by weight
-    double diff = sigma_i - sigma_ki;
-    double weightedDiff = diff * weight;
-    // std::cout << "sigma difference = " << diff << std::endl;
-    // std::cout << "weightedDiff = " << weightedDiff << std::endl;
-
-    // Update fitting error and sum of weights
-    fittingError += weightedDiff;
-    sumWeights += weight;
-  }
-
-  // Divide the sum of weighted differences by the sum of weights to get the fitting error
-  if (sumWeights != 0.0)
-  {
-    fittingError /= sumWeights;
-  }
-
-  // std::cout << "fittingError = " << fittingError << std::endl;
-  // std::cout << "sumWeights = " << sumWeights << std::endl;
-  return fittingError;
-}
-
-class OptimiserFunctionObj
+class CubicSmileObjective
 {
 private:
-  std::vector<TickData> TickDataVec;
-  double ForwardPrice;
-  double time_to_exp;
+  std::vector<TickData> volTickerSnap;
+  double forward;
+  double timeToExp;
 
 public:
-  OptimiserFunctionObj(std::vector<TickData> volTickerSnap,
-                       double fwd,
-                       double T) : TickDataVec(volTickerSnap),
-                                   ForwardPrice(fwd),
-                                   time_to_exp(T)
+  CubicSmileObjective(const std::vector<TickData> &volTickerSnap_, double fwd, double T) : volTickerSnap(volTickerSnap_), forward(fwd), timeToExp(T) {}
+
+  double operator()(const Eigen::VectorXd &x, Eigen::VectorXd &grad)
   {
-  }
-  Scalar operator()(const Vector &x, Vector &grad)
-  {
-    // TODO: implement regularization or tune the learning rate
-    // you can influence this indirectly with parameters like min_step and max_step, ftol and wolfe, and the choice of line search algorithm (linesearch):
-    // min_step and max_step set the lower and upper bounds on the step size that the line search algorithm can take in any single iteration. If you want to effectively lower the learning rate, you could decrease the max_step value.
-    // ftol and wolfe control the accuracy of the line search routine. Lowering ftol or increasing wolfe can make the line search more stringent, which might effectively result in smaller steps, i.e., lower learning rate.
-    // The linesearch parameter can be set to different line search algorithms which have different properties that might affect the step length.
-    auto sm = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4]);
-    Scalar fx = sm.CalculateFittingError(TickDataVec, sm);
+    // Extract parameters from x
+    double atmvol = x(0);
+    double bf25 = x(1);
+    double rr25 = x(2);
+    double bf10 = x(3);
+    double rr10 = x(4);
 
-    // use forward difference to reduce computation
-    auto sm_1u = CubicSmile(ForwardPrice, time_to_exp, x[0] + 0.001, x[1], x[2], x[3], x[4]);
-    auto sm_2u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1] + 0.001, x[2], x[3], x[4]);
-    auto sm_3u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2] + 0.001, x[3], x[4]);
-    auto sm_4u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3] + 0.001, x[4]);
-    auto sm_5u = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4] + 0.001);
+    // Construct CubicSmile object
+    CubicSmile cs(forward, timeToExp, atmvol, bf25, rr25, bf10, rr10);
+    double error = CalculateFittingError(volTickerSnap, cs);
 
-    // auto sm_1d = CubicSmile(ForwardPrice, time_to_exp, x[0] - 0.001, x[1], x[2], x[3], x[4]);
-    // auto sm_2d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1] - 0.001, x[2], x[3], x[4]);
-    // auto sm_3d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2] - 0.001, x[3], x[4]);
-    // auto sm_4d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3] - 0.001, x[4]);
-    // auto sm_5d = CubicSmile(ForwardPrice, time_to_exp, x[0], x[1], x[2], x[3], x[4] - 0.001);
+    // Compute gradient of objective function with respect to parameters
+    const double delta = 0.001; // or an appropriate small number for your problem
 
-    // forward diff
-    grad[0] = (sm_1u.CalculateFittingError(TickDataVec, sm_1u) - fx)) / 0.001;
-    grad[1] = (sm_2u.CalculateFittingError(TickDataVec, sm_2u) - fx)) / 0.001;
-    grad[2] = (sm_3u.CalculateFittingError(TickDataVec, sm_3u) - fx)) / 0.001;
-    grad[3] = (sm_4u.CalculateFittingError(TickDataVec, sm_4u) - fx)) / 0.001;
-    grad[4] = (sm_5u.CalculateFittingError(TickDataVec, sm_5u) - fx)) / 0.001;
+    for (int i = 0; i < x.size(); ++i)
+    {
+      Eigen::VectorXd x_plus_delta = x;
+      x_plus_delta(i) += delta;
+      
+      // Recompute the parameters based on updated vector
+      atmvol = x_plus_delta(0);
+      bf25 = x_plus_delta(1);
+      rr25 = x_plus_delta(2);
+      bf10 = x_plus_delta(3);
+      rr10 = x_plus_delta(4);
 
-    // central diff
-    // grad[0] = (sm_1u.CalculateFittingError(TickDataVec, sm_1u) - sm_1d.CalculateFittingError(TickDataVec, sm_1d)) / 0.002;
-    // grad[1] = (sm_2u.CalculateFittingError(TickDataVec, sm_2u) - sm_2d.CalculateFittingError(TickDataVec, sm_2d)) / 0.002;
-    // grad[2] = (sm_3u.CalculateFittingError(TickDataVec, sm_3u) - sm_3d.CalculateFittingError(TickDataVec, sm_3d)) / 0.002;
-    // grad[3] = (sm_4u.CalculateFittingError(TickDataVec, sm_4u) - sm_4d.CalculateFittingError(TickDataVec, sm_4d)) / 0.002;
-    // grad[4] = (sm_5u.CalculateFittingError(TickDataVec, sm_5u) - sm_5d.CalculateFittingError(TickDataVec, sm_5d)) / 0.002;
+      // Construct another CubicSmile object
+      CubicSmile cs_plus_delta(forward, timeToExp, atmvol, bf25, rr25, bf10, rr10);
 
-    // Print the gradient values to the console
-    std::cout << "Gradient values: "
-              << "grad[0] = " << grad[0] << ", "
-              << "grad[1] = " << grad[1] << ", "
-              << "grad[2] = " << grad[2] << ", "
-              << "grad[3] = " << grad[3] << ", "
-              << "grad[4] = " << grad[4] << std::endl;
+      // Compute the error for this altered parameter set
+      double error_plus_delta = CalculateFittingError(volTickerSnap, cs_plus_delta);
 
-    return fx;
+      // The gradient is the change in error divided by the change in the parameter
+      grad(i) = (error_plus_delta - error) / delta;
+    }
+
+    return error;
   }
 };
+
 
 CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
 {
@@ -214,42 +204,41 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
 
   auto sm = CubicSmile(fwd, T, atmvol, bf25, rr25, bf10, rr10);
   std::tie(sm.maxOpenInterest, sm.maxSpread) = GetMaxValues(volTickerSnap);
-  double fittingError = sm.CalculateFittingError(volTickerSnap, sm);
+  double fittingError = CalculateFittingError(volTickerSnap, sm);
 
   // Define parameters
-  const int n = 5;
+  // const int n = 5;
   LBFGSBParam<Scalar> param;
-  param.max_step = 0.1; // Lower max_step value
-  param.ftol = 1e-6;    // Lower ftol value
-  param.wolfe = 0.95;   // Increase wolfe value
-  param.max_linesearch = 100;
+  // min_step and max_step set the lower and upper bounds on the step size that the line search algorithm can take in any single iteration. If you want to effectively lower the learning rate, you could decrease the max_step value.
+  // param.max_step = 0.1; // Lower max_step value
+
+  // ftol and wolfe control the accuracy of the line search routine. Lowering ftol or increasing wolfe can make the line search more stringent, which might effectively result in smaller steps, i.e., lower learning rate.
+  // param.ftol = 1e-6;    // Lower ftol value
+  // param.wolfe = 0.95;   // Increase wolfe value
+  // param.max_linesearch = 100;
 
   LBFGSBSolver<Scalar> solver(param);
-  OptimiserFunctionObj fun(volTickerSnap, fwd, T);
+  // OptimiserFunctionObj fun(volTickerSnap, fwd, T);
 
+  // Initial guess for parameters
+  Eigen::VectorXd x0(5);
   // Variable bounds
-  Vector lb = Vector::Constant(n, -10.0);
-  Vector ub = Vector::Constant(n, 10.0);
-
-  // vega bound
-  lb[0] = 0.00;
-  ub[0] = 1.0;
-
+  Eigen::VectorXd lb(5), ub(5);
   // Initial values
-  Vector x = Vector::Constant(n, 0.0);
-  x[0] = atmvol;
-  x[1] = bf25;
-  x[2] = rr25;
-  x[3] = bf10;
-  x[4] = rr10;
+  // Vector x = Vector::Constant(n, 0.0);
+  x0 << atmvol, bf25, rr25, bf10, rr10;
+  lb << 0, 0, 0, 0, 0;
+  ub << 500, 500, 500, 500, 500;
+
+  CubicSmileObjective fun(volTickerSnap, fwd, T);
 
   Scalar fx;
   try
   {
-    int niter = solver.minimize(fun, x, fx, lb, ub);
+    int niter = solver.minimize(fun, x0, fx, lb, ub);
     std::cout << niter << " iterations" << std::endl;
     std::cout << "x = \n"
-              << x.transpose() << std::endl;
+              << x0.transpose() << std::endl;
     std::cout << "f(x) = " << fx << std::endl;
   }
   catch (const std::runtime_error &e)
@@ -261,7 +250,7 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
     std::cerr << "An unknown error occurred." << std::endl;
   }
 
-  return CubicSmile(fwd, T, x[0], x[1], x[2], x[3], x[4], {atmvol, bf25, rr25, bf10, rr10});
+  return CubicSmile(fwd, T, x0(0), x0(1), x0(2), x0(3), x0(4), {atmvol, bf25, rr25, bf10, rr10}, fittingError);
 }
 
 CubicSmile::CubicSmile(double underlyingPrice, double T, double atmvol,
@@ -286,7 +275,7 @@ CubicSmile::CubicSmile(double underlyingPrice, double T, double atmvol,
   strikeMarks.push_back(std::pair<double, double>(k_qd25, v_qd25));
   strikeMarks.push_back(std::pair<double, double>(k_qd10, v_qd10));
 
-  precio_futuro = underlyingPrice;
+  future_price = underlyingPrice;
   primer_guess = init_guess;
   primer_error = init_error;
 
