@@ -9,7 +9,7 @@
 //create header in output file
 void init_output_file(std::ofstream& file){
     std::vector<std::string> col_vec{"TIME","EXPIRY","FUT_PRICE","ATM","BF25","RR25","BF10","RR10", "ERROR",
-                                        "BEFORE_ATM","BEFORE_BF25","BEFORE_RR25","BEFORE_BF10","BEFORE_RR10", "BEFORE_ERROR"};
+                                        "BEF_ATM","BEF_BF25","BEF_RR25","BEF_BF10","BEF_RR10", "BEF_ERROR"};
         // Send column names to the stream
     for(auto j = 0U; j < col_vec.size(); ++j)
     {
@@ -19,71 +19,42 @@ void init_output_file(std::ofstream& file){
     file << "\n";
 }
 
+void output_file(std::ofstream& file, const std::map<datetime_t, std::pair<CubicSmile, double>>& smile, const std::string& current_time)
+{
+    for (const auto& [datetime, smilePair] : smile)
+    {
+        const CubicSmile& smileObj = smilePair.first;
+        const double fittingError = smilePair.second;
 
-//ouput each smile at interval to file
-void output_file(std::ofstream& file, std::map<datetime_t, std::pair<CubicSmile, double> > &sonrisas, std::string tiempo_ahora){
-    for (auto iter = sonrisas.begin(); iter != sonrisas.end(); iter++) {
-        //auto sonrisa_obj = iter->second.first;
+        const std::vector<std::pair<double, double>>& strikeMarks = smileObj.GetStrikeMarks();
 
-        //std::cout <<iter->first  <<  iter->second.second << std::endl;
-        vector< pair<double, double> > strikemarks = iter->second.first.GetStrikeMarks();
+        // convert to decimal points
+        double v_qd90 = strikeMarks[0].second;
+        double v_qd75 = strikeMarks[1].second;
+        double atmvol = strikeMarks[2].second;
+        double v_qd25 = strikeMarks[3].second;
+        double v_qd10 = strikeMarks[4].second;
 
-        double v_qd90 = strikemarks[0].second;
-        double v_qd75 = strikemarks[1].second;
-        double atmvol = strikemarks[2].second;
-        double v_qd25 = strikemarks[3].second;
-        double v_qd10 = strikemarks[4].second;
-
-        double bf25 = ((v_qd75 + v_qd25)/2.0) - atmvol;
-        double bf10 = ((v_qd90 + v_qd10)/2.0) - atmvol;
+        double bf25 = ((v_qd75 + v_qd25) / 2.0) - atmvol;
+        double bf10 = ((v_qd90 + v_qd10) / 2.0) - atmvol;
         double rr25 = v_qd25 - v_qd75;
         double rr10 = v_qd10 - v_qd90;
 
-        file << tiempo_ahora;
-        file << ",";
-        file << iter->first.year;
-        file << std::setw(2) << std::setfill('0') << iter->first.month;
-        file << std::setw(2) << std::setfill('0') << iter->first.day;
-        file << ",";
-        file << iter->second.first.future_price;
-        file << ",";
-
-        file << atmvol;
-        file << ",";
-
-        file << bf25;
-        file << ",";
-
-        file << rr25;
-        file << ",";
-
-        file << bf10;
-        file << ",";
-
-        file << rr10;
-        file << ",";
-
-        file << iter->second.second;
-        file << ",";
-
-        file << iter->second.first.primer_guess[0];
-        file << ",";
-
-        file << iter->second.first.primer_guess[1];
-        file << ",";
-
-        file << iter->second.first.primer_guess[2];
-        file << ",";
-
-        file << iter->second.first.primer_guess[3];
-        file << ",";
-
-        file << iter->second.first.primer_guess[4];
-        file << ",";
-
-        file << iter->second.first.primer_error;
-        file << "\n";
-
+        file << current_time << ","
+             << datetime.year << std::setw(2) << std::setfill('0') << datetime.month << std::setw(2) << std::setfill('0') << datetime.day << ","
+             << smileObj.future_price << ","
+             << atmvol << ","
+             << bf25 << ","
+             << rr25 << ","
+             << bf10 << ","
+             << rr10 << ","
+             << fittingError << ","
+             << smileObj.primer_guess[0] << ","
+             << smileObj.primer_guess[1] << ","
+             << smileObj.primer_guess[2] << ","
+             << smileObj.primer_guess[3] << ","
+             << smileObj.primer_guess[4] << ","
+             << smileObj.primer_error << "\n";
     }
 }
 
@@ -114,7 +85,7 @@ int main(int argc, char **argv)
 
     auto timer_listener = [&](uint64_t now_ms)
     {
-        std::string now_time_str = convert_msec_to_string(now_ms);
+        std::string now_time_str = convert_msec_to_utc_string(now_ms);
         // fit smile
         auto smiles = volBuilder.FitSmiles();
         // TODO: stream the smiles and their fitting error to outputFile.csv

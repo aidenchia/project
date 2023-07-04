@@ -17,7 +17,7 @@ public:
   CubicSmile(double underlyingPrice, double T, double atmvol, double bf25, double rr25, double bf10, double rr10, vector<double> init_guess = {0, 0, 0, 0, 0}, double init_error = 0.0); // convert parameters to strikeMarks, then call BuildInterp() to create the cubic spline interpolator
   double Vol(double strike) const;
 
-  vector<pair<double, double>> GetStrikeMarks();
+  vector<pair<double, double>> GetStrikeMarks() const;
   double future_price;
   vector<double> primer_guess;
   double primer_error; // interpolate

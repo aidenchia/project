@@ -89,35 +89,17 @@ inline double CalculateFittingError(const std::vector<TickData> &volTickerSnap, 
 }
 
 // function to convert epoch time in millisec to string eg 2022-07-02T01:38:07.232Z
-inline std::string convert_msec_to_string(uint64_t m)
+inline std::string convert_msec_to_utc_string(uint64_t msec)
 {
-  using Clock = std::chrono::system_clock;
-  using Precision = std::chrono::milliseconds;
-  std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>
-      tp{std::chrono::milliseconds{m}};
-  std::stringstream sss;
-  std::string time_in_str;
+    datetime_t datetime = datetime_t(msec / 1000); // Convert milliseconds to seconds and create datetime_t object
 
-  // extract std::time_t from time_point
-  std::time_t t = Clock::to_time_t(tp);
+    // Create a formatted string in UTC format
+    char buffer[30];
+    std::sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
+                 datetime.year, datetime.month, datetime.day,
+                 datetime.hour, datetime.min, datetime.sec, (int)(msec % 1000));
 
-  // output the part supported by std::tm
-  sss << std::put_time(std::localtime(&t), "%FT%T.");
-
-  // get duration since epoch
-  auto dur = tp.time_since_epoch();
-
-  // extract the sub second part from the duration since epoch
-  auto ss =
-      std::chrono::duration_cast<Precision>(dur) % std::chrono::seconds{1};
-
-  // output the millisecond part
-  sss << std::setfill('0') << std::setw(3) << ss.count();
-  sss << "Z";
-
-  sss >> time_in_str;
-
-  return time_in_str;
+    return std::string(buffer);
 }
 
 #endif

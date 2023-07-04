@@ -41,6 +41,7 @@ bool ReadHeader(std::ifstream &file, Msg &msg, std::map<std::string, int> &colum
   std::getline(file, line);
   ss.str(line);
 
+  std::cout << "reading header position:" << file.tellg() << std::endl;
   int pos = 0;
   while (std::getline(ss, token, ','))
   {
@@ -48,6 +49,25 @@ bool ReadHeader(std::ifstream &file, Msg &msg, std::map<std::string, int> &colum
     column_pos[token] = pos;
     pos++;
   }
+
+  // read the next line and insert into row vector
+  std::getline(file, line);
+
+  std::stringstream ssheader(line);
+  std::vector<std::string> row_vec;
+  std::string token2;
+  std::cout << "current position:" << file.tellg() << std::endl;
+  // pull out row data from csv
+  while (std::getline(ssheader, token2, ','))
+  {
+    row_vec.emplace_back(std::move(token2));
+  }
+
+  // initialise the first time stamp
+  msg.timestamp = TimeToUnixMS(row_vec[column_pos["time"]]);
+
+  file.seekg(-(line.size() + 1), std::ios::cur);
+  std::cout << "read finished first time stamp reset current position to ->" << file.tellg() << std::endl;
 
   return true;
 }

@@ -133,7 +133,7 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
 
   auto sm = CubicSmile(fwd, T, atmvol, bf25, rr25, bf10, rr10);
   std::tie(sm.maxOpenInterest, sm.maxSpread) = GetMaxValues(volTickerSnap);
-  double fittingError = CalculateFittingError(volTickerSnap, sm);
+  double initialError = CalculateFittingError(volTickerSnap, sm);
 
   // Define parameters
   // const int n = 5;
@@ -185,7 +185,7 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
     std::cerr << "An unknown error occurred." << std::endl;
   }
 
-  return CubicSmile(fwd, T, x0(0), x0(1), x0(2), x0(3), x0(4), {atmvol, bf25, rr25, bf10, rr10}, fittingError);
+  return CubicSmile(fwd, T, x0(0), x0(1), x0(2), x0(3), x0(4), {atmvol, bf25, rr25, bf10, rr10}, initialError);
 }
 
 CubicSmile::CubicSmile(double underlyingPrice, double T, double atmvol,
@@ -219,7 +219,7 @@ CubicSmile::CubicSmile(double underlyingPrice, double T, double atmvol,
   // BuildInterpNotAKnot();
 }
 
-vector<pair<double, double>> CubicSmile::GetStrikeMarks()
+vector<pair<double, double>> CubicSmile::GetStrikeMarks() const
 {
   return strikeMarks;
 }
