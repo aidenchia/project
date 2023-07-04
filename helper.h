@@ -60,14 +60,14 @@ inline double CalculateFittingError(const std::vector<TickData> &volTickerSnap, 
     // std::cout << "TickData contract = " << tickData.ContractName << std::endl;
     // std::cout << "weight = " << weight << std::endl;
     // Calculate average implied volatility
-    double sigma_i = (tickData.BestBidIV + tickData.BestAskIV) / 2.0 / 100;
+    double sigma_i = (tickData.BestBidIV + tickData.BestAskIV) / 2.0;
 
     // Calculate model implied volatility
     // TODO: Check why is this nan
-    double sigma_ki = sm.Vol(tickData.Strike) / 100;
+    double sigma_ki = sm.Vol(tickData.Strike) ;
 
     // Calculate difference and multiply by weight
-    double diff = sigma_i - sigma_ki;
+    double diff = std::abs(sigma_i - sigma_ki);
     double weightedDiff = diff * weight;
     // std::cout << "sigma difference = " << diff << std::endl;
     // std::cout << "weightedDiff = " << weightedDiff << std::endl;

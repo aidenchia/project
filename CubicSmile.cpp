@@ -19,9 +19,22 @@ private:
   std::vector<TickData> volTickerSnap;
   double forward;
   double timeToExp;
+  // double acceptable_error;
+  bool initialized_best_parameters;
 
 public:
-  CubicSmileObjective(const std::vector<TickData> &volTickerSnap_, double fwd, double T) : volTickerSnap(volTickerSnap_), forward(fwd), timeToExp(T) {}
+  double best_error;
+  Eigen::VectorXd best_parameters;
+
+  CubicSmileObjective(const std::vector<TickData> &volTickerSnap_, double fwd, double T)
+      : volTickerSnap(volTickerSnap_),
+        forward(fwd),
+        timeToExp(T),
+        // acceptable_error(acceptable_error_),
+        initialized_best_parameters(false)
+  {
+    best_error = std::numeric_limits<double>::max();
+  }
 
   double operator()(const Eigen::VectorXd &x, Eigen::VectorXd &grad)
   {
@@ -37,6 +50,14 @@ public:
     // Construct CubicSmile object
     CubicSmile cs(forward, timeToExp, atmvol, bf25, rr25, bf10, rr10);
     double error = CalculateFittingError(volTickerSnap, cs);
+
+    // Initialize the best_parameters with the first x if not already initialized
+    if (!initialized_best_parameters)
+    {
+      best_parameters = x;
+      best_error = error;
+      initialized_best_parameters = true;
+    }
 
     // Compute gradient of objective function with respect to parameters
     const double delta = 0.001; // or an appropriate small number for your problem
@@ -63,12 +84,23 @@ public:
       grad(i) = (error_plus_delta - error) / delta;
     }
 
-    // std::cout << "Gradient values: "
-    //           << "grad[0] = " << grad[0] << ", "
-    //           << "grad[1] = " << grad[1] << ", "
-    //           << "grad[2] = " << grad[2] << ", "
-    //           << "grad[3] = " << grad[3] << ", "
-    //           << "grad[4] = " << grad[4] << std::endl;
+    std::cout << "Gradient values: "
+              << "grad[0] = " << grad[0] << ", "
+              << "grad[1] = " << grad[1] << ", "
+              << "grad[2] = " << grad[2] << ", "
+              << "grad[3] = " << grad[3] << ", "
+              << "grad[4] = " << grad[4] << ","
+              << "error = " << error << std::endl;
+    std::cout << "x = \n"
+              << x.transpose() << std::endl;
+
+    // Check if the error is less than the acceptable error threshold and update the best error and parameter values
+
+    if (error < best_error)
+    {
+      best_error = error;
+      best_parameters = x;
+    }
 
     return error;
   }
@@ -139,12 +171,17 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   // const int n = 5;
   LBFGSBParam<Scalar> param;
   // min_step and max_step set the lower and upper bounds on the step size that the line search algorithm can take in any single iteration. If you want to effectively lower the learning rate, you could decrease the max_step value.
-  // param.max_step = 0.1; // Lower max_step value
+  // param.max_step = 0.01; // Lower max_step value
 
   // ftol and wolfe control the accuracy of the line search routine. Lowering ftol or increasing wolfe can make the line search more stringent, which might effectively result in smaller steps, i.e., lower learning rate.
-  // param.ftol = 1e-6;    // Lower ftol value
-  // param.wolfe = 0.95;   // Increase wolfe value
-  // param.max_linesearch = 100;
+  // param.ftol = 1e-6;  // Lower ftol value
+  // param.wolfe = 0.95; // Increase wolfe value
+  param.max_linesearch = 100;
+
+  // Declare and initialize the acceptable error variable
+  double acceptable_error = 0.0001;
+  // // Set the acceptable error in the LBFGSBParam object
+  // param.epsilon = acceptable_error;
 
   LBFGSBSolver<Scalar> solver(param);
   // OptimiserFunctionObj fun(volTickerSnap, fwd, T);
@@ -152,8 +189,8 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   // Initial guess for parameters
   Eigen::VectorXd x0(5);
   // Variable bounds
-  Eigen::VectorXd lb = Eigen::VectorXd::Constant(5, -1000);
-  Eigen::VectorXd ub = Eigen::VectorXd::Constant(5, 1000);
+  Eigen::VectorXd lb = Eigen::VectorXd::Constant(5, -10);
+  Eigen::VectorXd ub = Eigen::VectorXd::Constant(5, 10);
   // Initial values
   // Vector x = Vector::Constant(n, 0.0);
   x0 << atmvol, bf25, rr25, bf10, rr10;
@@ -168,21 +205,50 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   try
   {
     int niter = solver.minimize(fun, x0, fx, lb, ub);
+
     std::cout << niter << " iterations" << std::endl;
     std::cout << "x = \n"
               << x0.transpose() << std::endl;
     std::cout << "f(x) = " << fx << std::endl;
+
+    // Check if the final error exceeds the acceptable threshold
+    if (fx > acceptable_error)
+    {
+      std::cout << "Optimization stopped due to error exceeding the acceptable threshold." << std::endl;
+      // Optionally, you can access the best error and parameter values seen so far using the `fun` object.
+      std::cout << "Best error: " << fun.best_error << std::endl;
+      std::cout << "Best parameters: " << fun.best_parameters.transpose() << std::endl;
+    }
+    else
+    {
+      std::cout << "Optimization completed successfully." << std::endl;
+      std::cout << "Final error: " << fx << std::endl;
+      std::cout << "Final parameters: " << x0.transpose() << std::endl;
+    }
   }
   catch (const std::runtime_error &e)
   {
-    std::cout << "-----------After optimisation ----------" << std::endl;
+    std::cout << "-----------After optimisation run time limit----------" << std::endl;
     std::cout << "x = \n"
               << x0.transpose() << std::endl;
     std::cerr << "Runtime error: " << e.what() << std::endl;
+
+    x0 = fun.best_parameters;
+    std::cout << "Using best parameters" << std::endl;
+    std::cout << "x = \n"
+              << x0.transpose() << std::endl;
+    return CubicSmile(fwd, T, x0(0), x0(1), x0(2), x0(3), x0(4), {atmvol, bf25, rr25, bf10, rr10}, initialError);
   }
   catch (...)
   {
-    std::cerr << "An unknown error occurred." << std::endl;
+    std::cerr << "-----------An unknown error occurred.-----------" << std::endl;
+    std::cout << "x = \n"
+              << x0.transpose() << std::endl;
+    x0 = fun.best_parameters;
+    std::cout << "Using best parameters" << std::endl;
+    std::cout << "x = \n"
+              << x0.transpose() << std::endl;
+    return CubicSmile(fwd, T, x0(0), x0(1), x0(2), x0(3), x0(4), {atmvol, bf25, rr25, bf10, rr10}, initialError);
   }
 
   return CubicSmile(fwd, T, x0(0), x0(1), x0(2), x0(3), x0(4), {atmvol, bf25, rr25, bf10, rr10}, initialError);
