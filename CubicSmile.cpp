@@ -84,15 +84,15 @@ public:
       grad(i) = (error_plus_delta - error) / delta;
     }
 
-    std::cout << "Gradient values: "
-              << "grad[0] = " << grad[0] << ", "
-              << "grad[1] = " << grad[1] << ", "
-              << "grad[2] = " << grad[2] << ", "
-              << "grad[3] = " << grad[3] << ", "
-              << "grad[4] = " << grad[4] << ","
-              << "error = " << error << std::endl;
-    std::cout << "x = \n"
-              << x.transpose() << std::endl;
+    // std::cout << "Gradient values: "
+    //           << "grad[0] = " << grad[0] << ", "
+    //           << "grad[1] = " << grad[1] << ", "
+    //           << "grad[2] = " << grad[2] << ", "
+    //           << "grad[3] = " << grad[3] << ", "
+    //           << "grad[4] = " << grad[4] << ","
+    //           << "error = " << error << std::endl;
+    // std::cout << "x = \n"
+    //           << x.transpose() << std::endl;
 
     // Check if the error is less than the acceptable error threshold and update the best error and parameter values
 
@@ -116,7 +116,7 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   // - fit the 5 parameters of the smile, atmvol, bf25, rr25, bf10, and rr10 using L-BFGS-B solver, to the ticker data
   // ....
   // after the fitting, we can return the resulting smile
-  std::cout << volTickerSnap.size() << std::endl;
+  // std::cout << volTickerSnap.size() << std::endl;
 
   std::map<datetime_t, int> expDate;
   for (const TickData &tickData : volTickerSnap)
@@ -124,10 +124,10 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
     expDate[tickData.ExpiryDate]++;
   }
 
-  for (const auto &entry : expDate)
-  {
-    std::cout << "Unique date:  " << entry.first << " , count: " << entry.second << std::endl;
-  }
+  // for (const auto &entry : expDate)
+  // {
+  //   std::cout << "Unique date:  " << entry.first << " , count: " << entry.second << std::endl;
+  // }
 
   double undPriceSum = std::accumulate(volTickerSnap.begin(), volTickerSnap.end(), 0.0,
                                        [](double acc, const TickData &data)
@@ -195,9 +195,9 @@ CubicSmile CubicSmile::FitSmile(const std::vector<TickData> &volTickerSnap)
   // Vector x = Vector::Constant(n, 0.0);
   x0 << atmvol, bf25, rr25, bf10, rr10;
 
-  std::cout << "-----------Before optimisation ----------" << std::endl;
-  std::cout << "x = \n"
-            << x0.transpose() << std::endl;
+  // std::cout << "-----------Before optimisation ----------" << std::endl;
+  // std::cout << "x = \n"
+  //           << x0.transpose() << std::endl;
 
   CubicSmileObjective fun(volTickerSnap, fwd, T);
 
@@ -378,34 +378,34 @@ double CubicSmile::Vol(double strike) const
 /**
  * The fitting error some how become very bad shall not use this
  */
-// void CubicSmile::BuildInterpNotAKnot()
-// {
-//   int n = strikeMarks.size();
-//   y2.resize(n);
-//   vector<double> u(n - 1);
+void CubicSmile::BuildInterpNotAKnot()
+{
+  int n = strikeMarks.size();
+  y2.resize(n);
+  vector<double> u(n - 1);
 
-//   double sig, p;
+  double sig, p;
 
-//   y2[0] = 0.0;
-//   u[0] = (3.0 / (strikeMarks[1].first - strikeMarks[0].first)) *
-//          ((strikeMarks[1].second - strikeMarks[0].second) / (strikeMarks[1].first - strikeMarks[0].first));
+  y2[0] = 0.0;
+  u[0] = (3.0 / (strikeMarks[1].first - strikeMarks[0].first)) *
+         ((strikeMarks[1].second - strikeMarks[0].second) / (strikeMarks[1].first - strikeMarks[0].first));
 
-//   for (int i = 1; i < n - 1; i++)
-//   {
-//     sig = (strikeMarks[i].first - strikeMarks[i - 1].first) / (strikeMarks[i + 1].first - strikeMarks[i - 1].first);
-//     p = sig * y2[i - 1] + 2.0;
-//     y2[i] = (sig - 1.0) / p;
-//     u[i] = (strikeMarks[i + 1].second - strikeMarks[i].second) / (strikeMarks[i + 1].first - strikeMarks[i].first) - (strikeMarks[i].second - strikeMarks[i - 1].second) / (strikeMarks[i].first - strikeMarks[i - 1].first);
-//     u[i] = (6.0 * u[i] / (strikeMarks[i + 1].first - strikeMarks[i - 1].first) - sig * u[i - 1]) / p;
-//   }
+  for (int i = 1; i < n - 1; i++)
+  {
+    sig = (strikeMarks[i].first - strikeMarks[i - 1].first) / (strikeMarks[i + 1].first - strikeMarks[i - 1].first);
+    p = sig * y2[i - 1] + 2.0;
+    y2[i] = (sig - 1.0) / p;
+    u[i] = (strikeMarks[i + 1].second - strikeMarks[i].second) / (strikeMarks[i + 1].first - strikeMarks[i].first) - (strikeMarks[i].second - strikeMarks[i - 1].second) / (strikeMarks[i].first - strikeMarks[i - 1].first);
+    u[i] = (6.0 * u[i] / (strikeMarks[i + 1].first - strikeMarks[i - 1].first) - sig * u[i - 1]) / p;
+  }
 
-//   y2[n - 1] = 0.0;
+  y2[n - 1] = 0.0;
 
-//   y2[n - 1] = (y2[n - 3] / 4.0 - y2[n - 2] / 2.0 - u[n - 2]) / (0.5 - y2[n - 2]);
-//   for (int i = n - 2; i >= 0; i--)
-//   {
-//     y2[i] = y2[i] * y2[i + 1] + u[i];
-//   }
+  y2[n - 1] = (y2[n - 3] / 4.0 - y2[n - 2] / 2.0 - u[n - 2]) / (0.5 - y2[n - 2]);
+  for (int i = n - 2; i >= 0; i--)
+  {
+    y2[i] = y2[i] * y2[i + 1] + u[i];
+  }
 
-//   y2[0] = y2[2] / 4.0 - y2[1] / 2.0;
-// }
+  y2[0] = y2[2] / 4.0 - y2[1] / 2.0;
+}

@@ -76,7 +76,7 @@ struct TickData
     {
         ExtractContractInfo();
         // logging it out just to ensure the data is being added correctly
-        LogTickData();
+        // LogTickData();
     }
 
     void LogMoneyness() const

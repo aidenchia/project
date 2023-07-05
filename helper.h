@@ -64,7 +64,7 @@ inline double CalculateFittingError(const std::vector<TickData> &volTickerSnap, 
 
     // Calculate model implied volatility
     // TODO: Check why is this nan
-    double sigma_ki = sm.Vol(tickData.Strike) ;
+    double sigma_ki = sm.Vol(tickData.Strike);
 
     // Calculate difference and multiply by weight
     double diff = std::abs(sigma_i - sigma_ki);
@@ -91,15 +91,51 @@ inline double CalculateFittingError(const std::vector<TickData> &volTickerSnap, 
 // function to convert epoch time in millisec to string eg 2022-07-02T01:38:07.232Z
 inline std::string convert_msec_to_utc_string(uint64_t msec)
 {
-    datetime_t datetime = datetime_t(msec / 1000); // Convert milliseconds to seconds and create datetime_t object
 
-    // Create a formatted string in UTC format
-    char buffer[30];
-    std::sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
-                 datetime.year, datetime.month, datetime.day,
-                 datetime.hour, datetime.min, datetime.sec, (int)(msec % 1000));
+  // std::cout << "incoming msec = " << msec << std::endl;
 
-    return std::string(buffer);
+  datetime_t datetime = datetime_t(msec / 1000); // Convert milliseconds to seconds and create datetime_t object
+
+  // Create a formatted string in UTC format
+  char buffer[30];
+  std::sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
+               datetime.year, datetime.month, datetime.day,
+               datetime.hour, datetime.min, datetime.sec, (int)(msec % 1000));
+  // std::cout << "output string = " << std::string(buffer) << std::endl;
+  return std::string(buffer);
+}
+
+inline std::string getMonthAbbreviation(int month)
+{
+  switch (month)
+  {
+  case 1:
+    return "JAN";
+  case 2:
+    return "FEB";
+  case 3:
+    return "MAR";
+  case 4:
+    return "APR";
+  case 5:
+    return "MAY";
+  case 6:
+    return "JUN";
+  case 7:
+    return "JUL";
+  case 8:
+    return "AUG";
+  case 9:
+    return "SEP";
+  case 10:
+    return "OCT";
+  case 11:
+    return "NOV";
+  case 12:
+    return "DEC";
+  default:
+    return "XXX";
+  }
 }
 
 #endif

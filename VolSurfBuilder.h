@@ -26,7 +26,7 @@ protected:
 template <class Smile>
 void VolSurfBuilder<Smile>::Process(const Msg &msg)
 {
-    std::cout << "[VolSurfBuilder<Smile>::Process(const Msg &msg)] start..." << std::endl;
+    // std::cout << "[VolSurfBuilder<Smile>::Process(const Msg &msg)] start..." << std::endl;
 
     // TODO (Step 2)
     if (msg.isSnap)

@@ -41,11 +41,11 @@ bool ReadHeader(std::ifstream &file, Msg &msg, std::map<std::string, int> &colum
   std::getline(file, line);
   ss.str(line);
 
-  std::cout << "reading header position:" << file.tellg() << std::endl;
+  // std::cout << "reading header position:" << file.tellg() << std::endl;
   int pos = 0;
   while (std::getline(ss, token, ','))
   {
-    std::cout << "assigning header token : " << token << " in position : " << pos << std::endl;
+    // std::cout << "assigning header token : " << token << " in position : " << pos << std::endl;
     column_pos[token] = pos;
     pos++;
   }
@@ -56,7 +56,7 @@ bool ReadHeader(std::ifstream &file, Msg &msg, std::map<std::string, int> &colum
   std::stringstream ssheader(line);
   std::vector<std::string> row_vec;
   std::string token2;
-  std::cout << "current position:" << file.tellg() << std::endl;
+  // std::cout << "current position:" << file.tellg() << std::endl;
   // pull out row data from csv
   while (std::getline(ssheader, token2, ','))
   {
@@ -87,7 +87,7 @@ void ReplaceTickData(Msg &msg, const std::string &contractName, const TickData &
 bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &column_pos)
 {
   // TODO: your implementation to read file and create the next Msg into the
-  std::cout << "[ReadNextMsg] start..." << std::endl;
+  // std::cout << "[ReadNextMsg] start..." << std::endl;
   // Get the initial position of the file pointer
   std::streampos initialPosition = file.tellg();
 
@@ -99,7 +99,7 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
   {
     // read the file for the first time
     msg.isSet = true;
-    std::cout << "reading header columns..." << std::endl;
+    // std::cout << "reading header columns..." << std::endl;
     return ReadHeader(file, msg, column_pos);
   }
 
@@ -109,7 +109,7 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
   uint64_t first_snap_ts = 0U;
 
   // Print the positions
-  std::cout << "reading row data Position before while loop: " << initialPosition << std::endl;
+  // std::cout << "reading row data Position before while loop: " << initialPosition << std::endl;
   while (current_ts == last_ts || msg.Updates.empty())
   {
 
@@ -124,7 +124,7 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
     std::vector<std::string> row_vec;
     std::string token;
 
-    std::cout << "current position:" << file.tellg() << std::endl;
+    // std::cout << "current position:" << file.tellg() << std::endl;
 
     // pull out row data from csv
     while (std::getline(ss2, token, ','))
@@ -135,7 +135,7 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
     // check if timestamp is the same as last read
     msg.timestamp = TimeToUnixMS(row_vec[column_pos["time"]]);
     current_ts = msg.timestamp;
-    std::cout << "updated current ts with row data: " << current_ts << std::endl;
+    // std::cout << "updated current ts with row data: " << current_ts << std::endl;
 
     if (msg.Updates.empty())
     {
@@ -155,8 +155,8 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
       // time changed we need to step out
       // so we can re process this new time stamp
       file.seekg(-(line.size() + 1), std::ios::cur);
-      std::cout << "updated last ts: " << last_ts << std::endl;
-      std::cout << "change in time stamp reset current position to ->" << file.tellg() << std::endl;
+      // std::cout << "updated last ts: " << last_ts << std::endl;
+      // std::cout << "change in time stamp reset current position to ->" << file.tellg() << std::endl;
       break;
     }
 
@@ -165,14 +165,14 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
     msg.isSnap = row_vec[column_pos["msgType"]] == "snap";
     if (msg.isSnap)
     {
-      std::cout << "msg is a snap proceed to check if its a subsequent snaps which require clear..." << std::endl;
+      // std::cout << "msg is a snap proceed to check if its a subsequent snaps which require clear..." << std::endl;
       if (first_snap_ts != TimeToUnixMS(row_vec[column_pos["time"]]))
       {
-        std::cout << "first snap time is : " << first_snap_ts << " different from current row time proceed to clear... " << std::endl;
+        // std::cout << "first snap time is : " << first_snap_ts << " different from current row time proceed to clear... " << std::endl;
         msg.Updates.clear();
       }
       // add tickdata to msg after droping all previous snaps
-      std::cout << "adding tick data updates..." << std::endl;
+      // std::cout << "adding tick data updates..." << std::endl;
       msg.Updates.emplace_back(
           row_vec[column_pos["contractName"]],
           ConvertToDouble(row_vec[column_pos["bestBid"]]),
@@ -191,7 +191,7 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
     }
     else
     {
-      std::cout << "msg is not a snap, proceed with replace tick data..." << std::endl;
+      // std::cout << "msg is not a snap, proceed with replace tick data..." << std::endl;
       ReplaceTickData(msg,
                       row_vec[column_pos["contractName"]],
                       TickData(row_vec[column_pos["contractName"]],
@@ -212,10 +212,10 @@ bool ReadNextMsg(std::ifstream &file, Msg &msg, std::map<std::string, int> &colu
 
     last_ts = msg.timestamp;
 
-    std::cout << "after adding tick data to updates" << std::endl;
-    std::cout << "last ts: " << last_ts << std::endl;
-    std::cout << "current ts: " << current_ts << std::endl;
-    msg.LogMsg();
+    // std::cout << "after adding tick data to updates" << std::endl;
+    // std::cout << "last ts: " << last_ts << std::endl;
+    // std::cout << "current ts: " << current_ts << std::endl;
+    // msg.LogMsg();
   }
   return true;
 }
@@ -229,10 +229,10 @@ CsvFeeder::CsvFeeder(const std::string ticker_filename,
   // initialize member variables with input information, prepare for Step()
   // processing
 
-  std::cout << "File path: "
-            << std::filesystem::absolute(ticker_filename).string() << std::endl;
+  // std::cout << "File path: "
+  //           << std::filesystem::absolute(ticker_filename).string() << std::endl;
 
-  std::cout << "Is file open: " << ticker_file_.is_open() << std::endl;
+  // std::cout << "Is file open: " << ticker_file_.is_open() << std::endl;
 
   ReadNextMsg(ticker_file_, msg_, column_pos_);
   if (msg_.isSet)
@@ -248,7 +248,7 @@ CsvFeeder::CsvFeeder(const std::string ticker_filename,
 
 bool CsvFeeder::Step()
 {
-  std::cout << "[CsvFeeder::Step()] start ..." << std::endl;
+  // std::cout << "[CsvFeeder::Step()] start ..." << std::endl;
   if (msg_.isSet)
   {
     // call feed_listener with the loaded Msg

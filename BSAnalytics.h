@@ -152,20 +152,22 @@ std::vector<TickData> filterOptions(const std::vector<TickData> &options, std::s
     return filteredOptions;
 }
 
-double extrapolateIV(vector<TickData> vecOptions, double quickDeltaStrike, bool useCallOption) {
-    
+double extrapolateIV(vector<TickData> vecOptions, double quickDeltaStrike, bool usingBack)
+{
+
     double extrapolatedVol;
 
-    if (useCallOption) {
+    if (usingBack)
+    {
         TickData lastOption = vecOptions.back();
         TickData secondLastOption = vecOptions[vecOptions.size() - 2];
 
         double gradient = (lastOption.MarkIV - secondLastOption.MarkIV) / (lastOption.Strike - secondLastOption.Strike);
         extrapolatedVol = lastOption.MarkIV + (quickDeltaStrike - lastOption.Strike) * gradient;
-
     }
 
-    else {
+    else
+    {
         TickData firstOption = vecOptions.front();
         TickData secondOption = vecOptions[1];
 
@@ -176,11 +178,8 @@ double extrapolateIV(vector<TickData> vecOptions, double quickDeltaStrike, bool 
     assert(extrapolatedVol > 0);
 
     return extrapolatedVol;
-
 }
 
-// TODO : TRY USING ALL THE VOLTICKERSNAP INSTEAD OF FILTERING SEE IF IT HANDLES THE CORNER CASE FOR CALL WITH LARGER K
-// TODO: ELSE TRY TO IMPLEMENT EXTRAPOLATION FOR CALL WITH LARGER K THAN CALLOPTIONS AND PUT WITH SMALLER K THAN PUTOPTIONS LIST. SEE WHICH IS BETTER
 double interpolateQuickDeltaIV(
     const std::vector<TickData> &volTickerSnap, double quickDeltaStrike, bool useCallOption)
 {
@@ -195,18 +194,20 @@ double interpolateQuickDeltaIV(
         if (quickDeltaStrike > callOptions.back().Strike)
         {
             // Extrapolate for call options
-            // TODO: WIP IMPLEMENTATION 
-            double callVolatility = extrapolateIV(callOptions, quickDeltaStrike, useCallOption);
-            return callVolatility;
+            return extrapolateIV(callOptions, quickDeltaStrike, true);
+        }
+        else if (quickDeltaStrike < callOptions.front().Strike)
+        {
+            // Extrapolate for call options
+            return extrapolateIV(callOptions, quickDeltaStrike, false);
         }
         // Find the nearest call and put options to the quick delta strike
         auto callOption = std::upper_bound(callOptions.begin(), callOptions.end(), quickDeltaStrike,
-                                          [](double val, const TickData &option)
+                                           [](double val, const TickData &option)
                                            { return val < option.Strike; });
         if (callOption != callOptions.end())
         {
-            double callVolatility = interpolateIV(*callOption, *(callOption - 1), quickDeltaStrike);
-            return callVolatility;
+            return interpolateIV(*callOption, *(callOption - 1), quickDeltaStrike);
         }
     }
     else
@@ -219,33 +220,24 @@ double interpolateQuickDeltaIV(
         if (quickDeltaStrike < putOptions.front().Strike)
         {
             // Extrapolate for put options
-            // TODO: WIP IMPLEMENTATION
-            double putVolatility = extrapolateIV(putOptions, quickDeltaStrike, useCallOption);
-            return putVolatility;
+            return extrapolateIV(putOptions, quickDeltaStrike, false);
         }
+        else if (quickDeltaStrike > putOptions.back().Strike)
+        {
+            // Extrapolate for put options
+            return extrapolateIV(putOptions, quickDeltaStrike, true);
+        }
+
         auto putOption = std::lower_bound(putOptions.begin(), putOptions.end(), quickDeltaStrike,
                                           [](const TickData &option, double val)
                                           { return option.Strike < val; });
 
-        double putVolatility = interpolateIV(*putOption, *(putOption - 1), quickDeltaStrike);
-        return putVolatility;
+        return interpolateIV(*putOption, *(putOption - 1), quickDeltaStrike);
     }
 
     // Handle the case when the nearest call or put option is not available for interpolation
     return 0.0; // or any other appropriate default value
 }
-
-// double check if i need to make the iv same 
-// double getMSE(const std::vector<TickData>& volTickerSnap, const CubicSmile& cs)
-// {
-//     double total_error = 0;
-//     for (const TickData& tickdata : volTickerSnap) {
-//         double error = pow(tickdata.MarkIV/100 - cs.Vol(tickdata.Strike)/100, 2);
-//         total_error += error;
-//     }
-
-//     return total_error / volTickerSnap.size();
-// }
 
 
 #endif
